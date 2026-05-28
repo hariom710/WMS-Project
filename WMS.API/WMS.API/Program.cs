@@ -1,9 +1,10 @@
 
-using Microsoft.EntityFrameworkCore;
-using WMS.API.Data;
+using Bogus;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using WMS.API.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<WMSDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 // CORS Policy
 builder.Services.AddCors(options =>
@@ -20,11 +22,14 @@ builder.Services.AddCors(options =>
         {
             policy.WithOrigins(
                     "http://localhost:4200",
-                    "https://localhost:4200")
+                    "https://localhost:4200",
+                    "https://hariomwmsfrontend8501.azurewebsites.net")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
 });
+
+
 
 // JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
