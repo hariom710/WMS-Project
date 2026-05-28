@@ -1,4 +1,4 @@
-
+```yaml
 name: Build and deploy ASP.Net Core app to Azure Web App - hariomwmsapi8501
 
 on:
@@ -12,7 +12,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -23,15 +24,15 @@ jobs:
         run: dotnet restore
         working-directory: ./WMS.API/WMS.API
 
-      - name: Build
+      - name: Build project
         run: dotnet build --configuration Release --no-restore
         working-directory: ./WMS.API/WMS.API
 
-      - name: Publish
+      - name: Publish project
         run: dotnet publish -c Release -o publish
         working-directory: ./WMS.API/WMS.API
 
-      - name: Upload artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: app
@@ -41,27 +42,16 @@ jobs:
     runs-on: windows-latest
     needs: build
 
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: app
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'hariomwmsapi8501'
-          slot-name: 'Production'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: .
-
+```
