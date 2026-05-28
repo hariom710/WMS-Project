@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="WMS.API/WMS.API.csproj" />
+  <Project Path="WMS.Application/WMS.Application.csproj" Id="b3319464-5f00-4a93-b86b-12fda6ee8432" />
+  <Project Path="WMS.Domain/WMS.Domain.csproj" Id="36f25eb4-f312-45f6-8d2a-26bc03e95a5a" />
+  <Project Path="WMS.Infrastructure/WMS.Infrastructure.csproj" Id="c24ddd97-d663-41f1-846d-36aaeaa7e579" />
+</Solution>

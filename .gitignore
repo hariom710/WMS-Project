@@ -1,0 +1,28 @@
+```gitignore
+# Build folders
+bin/
+obj/
+publish/
+
+# Angular
+node_modules/
+dist/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Environment files
+.env
+
+# Azure
+appsettings.Development.json
+```
