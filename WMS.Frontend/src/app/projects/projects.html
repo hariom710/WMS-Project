@@ -1,0 +1,78 @@
+<div class="container mt-4" style="padding: 20px;">
+  <h2 style="color: #3f51b5; margin-bottom: 20px;">Project Management</h2>
+  
+  <div class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div class="card-header text-white" style="background-color: #3f51b5; padding: 15px; font-weight: bold; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+      Create New Project
+    </div>
+    <div class="card-body" style="padding: 20px;">
+      <form [formGroup]="projectForm" (ngSubmit)="onSubmit()">
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+          
+          <div style="flex: 2;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Project Name</label>
+            <input type="text" class="form-control" formControlName="projectName" placeholder="e.g., Cloud Migration" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+          </div>
+
+          <div style="flex: 1;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Start Date</label>
+            <input type="date" class="form-control" formControlName="startDate" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+          </div>
+
+          <div style="flex: 1;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">End Date</label>
+            <input type="date" class="form-control" formControlName="endDate" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+          </div>
+
+          <div style="flex: 1;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Status</label>
+            <select class="form-control" formControlName="status" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+              <option value="Active">Active</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          
+        </div>
+
+        <button type="submit" [disabled]="projectForm.invalid" style="background-color: #4caf50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+          Create Project
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div class="card-header" style="background-color: #f5f5f5; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">
+      Project Portfolio
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f9f9f9; text-align: left;">
+            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Project Name</th>
+            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Start Date</th>
+            <th style="padding: 15px; border-bottom: 2px solid #ddd;">End Date</th>
+            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="projects.length === 0">
+            <td colspan="4" style="padding: 20px; text-align: center; color: #888; font-style: italic;">
+              No projects have been posted yet.
+            </td>
+          </tr>
+
+          <tr *ngFor="let p of projects" style="border-bottom: 1px solid #eee;">
+            <td style="padding: 15px; font-weight: bold; color: #333;">{{ p.projectName }}</td>
+            <td style="padding: 15px; color: #555;">{{ p.startDate | date:'mediumDate' }}</td>
+            <td style="padding: 15px; color: #555;">{{ p.endDate | date:'mediumDate' }}</td>
+            <td style="padding: 15px; font-weight: bold;" 
+                [ngStyle]="{'color': p.status === 'Active' ? '#2196f3' : '#4caf50'}">
+              {{ p.status }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

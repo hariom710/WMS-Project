@@ -1,0 +1,65 @@
+<div class="container mt-4" style="padding: 20px; font-family: Roboto, sans-serif;">
+  <h2 style="color: #3f51b5; margin-bottom: 20px;">System Notice Board</h2>
+  
+  <div class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div class="card-header text-white" style="background-color: #e91e63; padding: 15px; font-weight: bold; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+      {{ isEditMode ? '✏️ Edit Broadcast Notice' : '📢 Broadcast New Notice' }}
+    </div>
+    <div class="card-body" style="padding: 20px;">
+      <form [formGroup]="alertForm" (ngSubmit)="onSubmit()">
+        <div style="margin-bottom: 15px;">
+          <label style="font-weight: bold; display: block; margin-bottom: 5px;">Notice Title</label>
+          <input type="text" class="form-control" formControlName="title" placeholder="e.g., Server Maintenance" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="font-weight: bold; display: block; margin-bottom: 5px;">Message Details</label>
+          <textarea class="form-control" formControlName="message" rows="3" placeholder="Provide full details here..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"></textarea>
+        </div>
+
+        <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+          <input type="checkbox" formControlName="isActive" id="activeCheck" style="transform: scale(1.2);">
+          <label for="activeCheck" style="font-weight: bold; margin: 0; color: #555;">Mark as Active (Visible to Employees)</label>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" style="background-color: #4caf50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            {{ isEditMode ? 'Update Announcement' : 'Post Announcement' }}
+          </button>
+
+          <button *ngIf="isEditMode" type="button" (click)="cancelEdit()" style="background-color: #757575; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <h4 style="color: #555; margin-bottom: 15px;">Recent Broadcasts</h4>
+  
+  <div *ngIf="alerts.length === 0" style="padding: 20px; background: #fff; border-radius: 8px; text-align: center; color: #888;">
+    No announcements have been posted yet.
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 15px;">
+    <div *ngFor="let alert of alerts" class="card" style="border-left: 5px solid #e91e63; padding: 20px; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 4px;">
+      
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <h5 style="margin: 0 0 8px 0; color: #333; font-size: 18px;">{{ alert.title }}</h5>
+          <p style="margin: 0 0 12px 0; color: #555; line-height: 1.5;">{{ alert.message }}</p>
+          <small style="color: #888; font-weight: 500;">
+            Posted: {{ alert.createdOn | date:'medium' }} | Status: 
+            <span [style.color]="alert.isActive ? '#4caf50' : '#e91e63'">{{ alert.isActive ? 'Active' : 'Inactive' }}</span>
+          </small>
+        </div>
+        
+        <div style="display: flex; gap: 8px;">
+          <button (click)="editAlert(alert)" style="background: #ffb300; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Edit</button>
+          <button (click)="deleteAlert(alert.announcementId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Delete</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>

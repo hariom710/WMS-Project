@@ -1,0 +1,144 @@
+<div class="container mt-4" style="padding: 20px; font-family: Roboto, sans-serif;">
+  <h2 style="color: #3f51b5; margin-bottom: 20px;">Leave Management</h2>
+  
+  <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+    <button (click)="activeTab = 'my-leaves'" 
+            [ngStyle]="{'background-color': activeTab === 'my-leaves' ? '#3f51b5' : '#e0e0e0', 'color': activeTab === 'my-leaves' ? 'white' : 'black'}" 
+            style="padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+      My Leaves
+    </button>
+    <button (click)="activeTab = 'manager-approvals'" 
+            [ngStyle]="{'background-color': activeTab === 'manager-approvals' ? '#3f51b5' : '#e0e0e0', 'color': activeTab === 'manager-approvals' ? 'white' : 'black'}" 
+            style="padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+      Team Requests (Manager)
+    </button>
+  </div>
+
+  <div *ngIf="activeTab === 'my-leaves'">
+    <div class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div class="card-header text-white" style="background-color: #3f51b5; padding: 15px; font-weight: bold; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+        Apply for Leave
+      </div>
+      <div class="card-body" style="padding: 20px;">
+        <form [formGroup]="leaveForm" (ngSubmit)="onSubmit()">
+          
+          <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div style="flex: 1;">
+              <label style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee</label>
+              <select class="form-control" formControlName="empId" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                <option [ngValue]="null" disabled selected>Select Employee...</option>
+                <option *ngFor="let emp of employees" [value]="emp.employeeId">
+                  {{ emp.firstName }} {{ emp.lastName }}
+                </option>
+              </select>
+            </div>
+
+            <div style="flex: 1;">
+              <label style="font-weight: bold; display: block; margin-bottom: 5px;">Leave Type</label>
+              <select class="form-control" formControlName="leaveType" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="Sick">Sick Leave</option>
+                <option value="Casual">Casual Leave</option>
+                <option value="Earned">Earned Leave</option>
+              </select>
+            </div>
+          </div>
+  
+          <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div style="flex: 1;">
+              <label style="font-weight: bold; display: block; margin-bottom: 5px;">From Date</label>
+              <input type="datetime-local" class="form-control" formControlName="fromDate" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+  
+            <div style="flex: 1;">
+              <label style="font-weight: bold; display: block; margin-bottom: 5px;">To Date</label>
+              <input type="datetime-local" class="form-control" formControlName="toDate" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+          </div>
+  
+          <div style="margin-bottom: 15px;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Reason</label>
+            <input type="text" class="form-control" formControlName="reason" placeholder="Brief reason for leave..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+          </div>
+  
+          <button type="submit" [disabled]="leaveForm.invalid" style="background-color: #4caf50; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            Submit Application
+          </button>
+        </form>
+      </div>
+    </div>
+  
+    <div class="card" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div class="card-header" style="background-color: #f5f5f5; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">
+        My Leave History
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background-color: #f9f9f9; text-align: left;">
+              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Leave Type</th>
+              <th style="padding: 15px; border-bottom: 2px solid #ddd;">From</th>
+              <th style="padding: 15px; border-bottom: 2px solid #ddd;">To</th>
+              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Status</th>
+              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="leaves.length === 0">
+              <td colspan="5" style="padding: 20px; text-align: center; color: #888; font-style: italic;">No leave history found.</td>
+            </tr>
+            <tr *ngFor="let l of leaves" style="border-bottom: 1px solid #eee;">
+              <td style="padding: 15px; font-weight: bold; color: #333;">{{ l.leaveType }}</td>
+              <td style="padding: 15px; color: #555;">{{ l.fromDate | date:'medium' }}</td>
+              <td style="padding: 15px; color: #555;">{{ l.toDate | date:'medium' }}</td>
+              <td style="padding: 15px; font-weight: bold;" [ngStyle]="{'color': l.status === 'Approved' ? '#4caf50' : (l.status === 'Rejected' ? '#e53935' : '#ff9800')}">
+                {{ l.status }}
+              </td>
+              <td style="padding: 15px;">
+                <button *ngIf="l.status === 'Pending'" (click)="cancelLeave(l.leaveId)" style="background: #e0e0e0; color: #333; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                  Cancel
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="activeTab === 'manager-approvals'">
+    <div class="card" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div class="card-header" style="background-color: #f5f5f5; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">
+        Pending Team Leaves
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background-color: #f9f9f9; text-align: left;">
+              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Employee</th>
+              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Leave Type</th>
+              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Dates</th>
+              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Reason</th>
+              <th style="padding: 15px; border-bottom: 2px solid #ddd; text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="pendingTeamLeaves.length === 0">
+              <td colspan="5" style="padding: 20px; text-align: center; color: #888; font-style: italic;">No pending leaves to review.</td>
+            </tr>
+            <tr *ngFor="let l of pendingTeamLeaves" style="border-bottom: 1px solid #eee;">
+              <td style="padding: 15px; font-weight: bold; color: #333;">{{ l.employee?.firstName }} {{ l.employee?.lastName }}</td>
+              <td style="padding: 15px;">{{ l.leaveType }}</td>
+              <td style="padding: 15px; color: #555;">{{ l.fromDate | date:'shortDate' }} - {{ l.toDate | date:'shortDate' }}</td>
+              <td style="padding: 15px; color: #555;">{{ l.reason }}</td>
+              <td style="padding: 15px; text-align: right;">
+                <button (click)="approveLeave(l.leaveId)" style="background: #4caf50; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px;">Approve</button>
+                <button (click)="rejectLeave(l.leaveId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Reject</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>

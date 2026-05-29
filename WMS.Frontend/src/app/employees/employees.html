@@ -1,0 +1,107 @@
+<div style="padding: 30px; font-family: Roboto, sans-serif;">
+  <h2 style="color: #3f51b5; margin-bottom: 20px;">Employee Directory</h2>
+
+  <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px;">
+    
+    <h4 style="margin-top: 0; color: #555;">
+      {{ isEditMode ? '✏️ Edit Employee Details' : 'Register New Employee' }}
+    </h4>
+    
+    <form [formGroup]="employeeForm" (ngSubmit)="onSubmit()">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        
+        <input type="text" placeholder="First Name" formControlName="firstName" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        <input type="text" placeholder="Last Name" formControlName="lastName" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        <input type="email" placeholder="Email Address" formControlName="email" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        
+        <input type="text" placeholder="Phone Number" formControlName="phoneNumber" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        <div>
+          <label style="font-size: 12px; color: #666; display: block; margin-bottom: 2px;">Date of Birth</label>
+          <input type="date" formControlName="dateOfBirth" style="padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: #666; display: block; margin-bottom: 2px;">Date of Joining</label>
+          <input type="date" formControlName="dateOfJoining" style="padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <select formControlName="departmentId" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+          <option [ngValue]="null" disabled selected>Select Department...</option>
+          <option *ngFor="let dept of departments" [value]="dept.departmentId">
+            {{ dept.departmentName }}
+          </option>
+        </select>
+
+        <select formControlName="roleId" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+          <option [ngValue]="null" disabled selected>Select Role...</option>
+          <option *ngFor="let role of roles" [value]="role.roleId">
+            {{ role.roleName }}
+          </option>
+        </select>
+        
+        <div style="display: flex; gap: 10px; align-items: flex-end; margin-top: 15px;">
+          <button type="submit" [disabled]="employeeForm.invalid" style="background: #3f51b5; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            {{ isEditMode ? 'Update Employee' : '+ Save Employee' }}
+          </button>
+
+          <button *ngIf="isEditMode" type="button" (click)="cancelEdit()" style="background: #e91e63; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            Cancel
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <input type="text" (keyup)="applyFilter($event)" placeholder="🔍 Search by name, email, department, or role..." style="width: 100%; max-width: 400px; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+  </div>
+
+  <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" style="width: 100%;">
+    
+    <ng-container matColumnDef="id">
+      <th mat-header-cell *matHeaderCellDef> ID </th>
+      <td mat-cell *matCellDef="let emp"> {{emp.employeeId}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef> Name </th>
+      <td mat-cell *matCellDef="let emp"> <strong>{{emp.firstName}} {{emp.lastName}}</strong> </td>
+    </ng-container>
+
+    <ng-container matColumnDef="email">
+      <th mat-header-cell *matHeaderCellDef> Email </th>
+      <td mat-cell *matCellDef="let emp"> {{emp.email}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="department">
+      <th mat-header-cell *matHeaderCellDef> Department </th>
+      <td mat-cell *matCellDef="let emp"> {{emp.department?.departmentName || 'N/A'}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="role">
+      <th mat-header-cell *matHeaderCellDef> Role </th>
+      <td mat-cell *matCellDef="let emp"> {{emp.role?.roleName || 'N/A'}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef> Status </th>
+      <td mat-cell *matCellDef="let emp"> 
+        <span [ngStyle]="{'background': emp.status === 'Active' ? '#e8f5e9' : '#ffebee', 'color': emp.status === 'Active' ? '#2e7d32' : '#c62828'}" style="padding: 4px 8px; border-radius: 4px; font-weight: 500;">
+          {{emp.status}}
+        </span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef style="text-align: right;"> Actions </th>
+      <td mat-cell *matCellDef="let emp" style="text-align: right;">
+        <button (click)="editEmployee(emp)" style="background: #ffb300; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">
+          Edit
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+</div>

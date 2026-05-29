@@ -1,0 +1,28 @@
+<nav *ngIf="authService.isLoggedIn | async" style="background-color: #3f51b5; padding: 15px 30px; color: white; font-family: Roboto, sans-serif; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 3px 5px rgba(0,0,0,0.2);">
+  
+  <div style="display: flex; gap: 20px; align-items: center;">
+    <h3 style="margin: 0; padding-right: 20px; border-right: 1px solid rgba(255,255,255,0.5);">WMS Admin</h3>
+    <a routerLink="/dashboard" style="color: white; text-decoration: none; font-weight: 500;">Dashboard</a>
+    <a routerLink="/departments" style="color: white; text-decoration: none; font-weight: 500;">Departments</a>
+    <a routerLink="/employees" style="color: white; text-decoration: none; font-weight: 500;">Employees</a>
+    <a routerLink="/attendance" style="color: white; text-decoration: none; font-weight: 500;">Attendance</a>
+    <a routerLink="/leaves" style="color: white; text-decoration: none; font-weight: 500;">Leaves</a>
+    <a routerLink="/projects" style="color: white; text-decoration: none; font-weight: 500;">Projects</a>
+    <a routerLink="/allocations" style="color: white; text-decoration: none; font-weight: 500;">Allocations</a>
+    <a routerLink="/clients" style="color: white; text-decoration: none; font-weight: 500;">Clients</a>
+    <a routerLink="/announcements" style="color: white; text-decoration: none; font-weight: 500;">Notices</a>
+  </div>
+
+  <div style="display: flex; gap: 15px; align-items: center;">
+    <a routerLink="/change-password" style="color: #e3f2fd; text-decoration: none; font-size: 14px; font-weight: bold;">
+      ⚙️ Change Password
+    </a>
+    <button (click)="onLogout()" style="background-color: #e91e63; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background-color 0.3s;">
+      Logout
+    </button>
+  </div>
+</nav>
+
+<main style="background-color: #f4f6f9; min-height: 100vh;">
+  <router-outlet></router-outlet>
+</main>

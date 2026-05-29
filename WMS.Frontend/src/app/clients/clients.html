@@ -1,0 +1,80 @@
+<div class="container mt-4" style="padding: 20px;">
+  <h2 style="color: #3f51b5; margin-bottom: 20px;">Client Management</h2>
+  
+  <div class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div class="card-header text-white" style="background-color: #3f51b5; padding: 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+      {{ isEditMode ? 'Edit Client' : 'Register New Client' }}
+    </div>
+    <div class="card-body" style="padding: 20px;">
+      <form [formGroup]="clientForm" (ngSubmit)="onSubmit()">
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+          
+          <div style="flex: 2;">
+            <label style="font-weight: bold;">Client Name</label>
+            <input type="text" class="form-control" formControlName="clientName" style="width: 100%; padding: 8px;">
+          </div>
+          <div style="flex: 1;">
+            <label style="font-weight: bold;">Phone Number</label>
+            <input type="text" class="form-control" formControlName="clientPhoneNumber" style="width: 100%; padding: 8px;">
+          </div>
+          <div style="flex: 1;">
+            <label style="font-weight: bold;">Location</label>
+            <input type="text" class="form-control" formControlName="clientLocation" style="width: 100%; padding: 8px;">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="font-weight: bold;">Full Address</label>
+          <input type="text" class="form-control" formControlName="clientAddress" style="width: 100%; padding: 8px;">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" [disabled]="clientForm.invalid" style="background-color: #4caf50; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+            {{ isEditMode ? 'Update Client' : 'Save Client' }}
+          </button>
+          <button *ngIf="isEditMode" type="button" (click)="cancelEdit()" style="background-color: #e91e63; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <table mat-table [dataSource]="clients" class="mat-elevation-z8" style="width: 100%;">
+    
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef> Client Name </th>
+      <td mat-cell *matCellDef="let element"> <strong>{{element.clientName}}</strong> </td>
+    </ng-container>
+
+    <ng-container matColumnDef="phone">
+      <th mat-header-cell *matHeaderCellDef> Phone </th>
+      <td mat-cell *matCellDef="let element"> {{element.clientPhoneNumber || 'N/A'}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="location">
+      <th mat-header-cell *matHeaderCellDef> Location </th>
+      <td mat-cell *matCellDef="let element"> {{element.clientLocation || 'N/A'}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef> Status </th>
+      <td mat-cell *matCellDef="let element"> 
+        <span [ngStyle]="{'color': element.status ? '#4caf50' : '#e53935', 'font-weight': 'bold'}">
+          {{element.status ? 'Active' : 'Inactive'}}
+        </span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef style="text-align: right;"> Actions </th>
+      <td mat-cell *matCellDef="let element" style="text-align: right; padding-right: 15px;">
+        <button (click)="editClient(element)" style="background: #ffb300; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; margin-right: 8px; cursor: pointer;">Edit</button>
+        <button (click)="deleteClient(element.clientId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Delete</button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+</div>

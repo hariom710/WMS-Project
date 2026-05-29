@@ -1,0 +1,83 @@
+<div class="container mt-4" style="padding: 20px;">
+  <h2 style="color: #3f51b5; margin-bottom: 20px;">Resource Allocation</h2>
+  
+  <div class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div class="card-header text-white" style="background-color: #3f51b5; padding: 15px; font-weight: bold; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+      Assign Employee to Project
+    </div>
+    <div class="card-body" style="padding: 20px;">
+      <form [formGroup]="allocationForm" (ngSubmit)="onSubmit()">
+        <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-end;">
+          
+          <div style="flex: 2;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee</label>
+            <select class="form-control" formControlName="empId" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+              <option [ngValue]="null" disabled>-- Choose Employee --</option>
+              <option *ngFor="let emp of employees" [value]="emp.employeeId">
+                {{ emp.firstName }} {{ emp.lastName }} ({{ emp.role?.roleName || 'No Role' }})
+              </option>
+            </select>
+          </div>
+
+          <div style="flex: 2;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Select Project</label>
+            <select class="form-control" formControlName="projectId" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+              <option [ngValue]="null" disabled>-- Choose Active Project --</option>
+              <option *ngFor="let p of projects" [value]="p.projectId">
+                {{ p.projectName }}
+              </option>
+            </select>
+          </div>
+
+          <div style="flex: 1;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Assignment Date</label>
+            <input type="date" class="form-control" formControlName="assignedOn" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+          </div>
+          
+          <div>
+            <button type="submit" [disabled]="allocationForm.invalid" style="background-color: #4caf50; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; height: 100%;">
+              Assign Resource
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div class="card-header" style="background-color: #f5f5f5; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">
+      Active Project Teams
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f9f9f9; text-align: left;">
+            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Project</th>
+            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Employee</th>
+            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Assigned On</th>
+            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Assigned By</th>
+            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="allocations.length === 0">
+            <td colspan="5" style="padding: 20px; text-align: center; color: #888; font-style: italic;">
+              No employees have been allocated to projects yet.
+            </td>
+          </tr>
+          <tr *ngFor="let a of allocations" style="border-bottom: 1px solid #eee;">
+            <td style="padding: 15px; font-weight: bold; color: #2196f3;">{{ a.project?.projectName }}</td>
+            <td style="padding: 15px; font-weight: bold; color: #333;">{{ a.employee?.firstName }} {{ a.employee?.lastName }}</td>
+            <td style="padding: 15px; color: #555;">{{ a.assignedOn | date:'mediumDate' }}</td>
+            <td style="padding: 15px; color: #555;">{{ a.createdBy }}</td>
+            <td style="padding: 15px;">
+              <button (click)="deleteAllocation(a.allocationId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                Remove
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
