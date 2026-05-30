@@ -1,9 +1,7 @@
 <div align="center">
 
-<!-- Animated Banner -->
-<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=28&duration=3000&pause=1000&color=0057FF&center=true&vCenter=true&width=700&lines=🏢+Workforce+Management+System;Enterprise-Grade+HR+Platform;ASP.NET+Core+%7C+Angular+%7C+Azure" alt="WMS Banner"/>
-
-<br/>
+<!-- Banner using shields.io capsule-render — GitHub whitelisted -->
+![header](https://capsule-render.vercel.app/api?type=waving&color=0057FF&height=200&section=header&text=Workforce%20Management%20System&fontSize=36&fontColor=ffffff&fontAlignY=38&desc=Enterprise-Grade%20HR%20Platform%20%7C%20ASP.NET%20Core%20%7C%20Angular%20%7C%20Azure&descSize=15&descAlignY=58&descColor=c8d8ff)
 
 ![.NET](https://img.shields.io/badge/.NET_8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![Angular](https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white)
@@ -257,8 +255,4 @@ Trainee Analyst @ Capgemini · BTech Computer Technology, YCCE Nagpur (2022–20
 
 ---
 
-<div align="center">
-
-*Built with ☕ and enterprise architecture.*
-
-</div>
+![footer](https://capsule-render.vercel.app/api?type=waving&color=0057FF&height=100&section=footer)
