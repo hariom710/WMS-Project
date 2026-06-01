@@ -19,7 +19,6 @@ namespace WMS.API.Controllers
             _context = context;
         }
 
-        // GET: api/Allocations
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProjectAllocation>>> GetAllocations()
         {
@@ -30,7 +29,7 @@ namespace WMS.API.Controllers
                 .ToListAsync();
         }
 
-        // POST: api/Allocations
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<ProjectAllocation>> PostAllocation(ProjectAllocation allocation)
         {
@@ -41,7 +40,6 @@ namespace WMS.API.Controllers
             allocation.CreatedBy = admin != null ? $"{admin.FirstName} {admin.LastName}" : "System Admin";
             allocation.Status = true;
 
-            // Check if this exact employee is already assigned to this exact project to prevent duplicates
             var exists = await _context.ProjectAllocations
                 .AnyAsync(a => a.EmpId == allocation.EmpId && a.ProjectId == allocation.ProjectId);
 
@@ -53,7 +51,7 @@ namespace WMS.API.Controllers
             return CreatedAtAction(nameof(GetAllocations), new { id = allocation.AllocationId }, allocation);
         }
 
-        // DELETE: api/Allocations/5
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAllocation(int id)
         {

@@ -1,7 +1,7 @@
 <div class="container mt-4" style="padding: 20px; font-family: Roboto, sans-serif;">
   <h2 style="color: #3f51b5; margin-bottom: 20px;">Leave Management</h2>
   
-  <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+  <div *ngIf="authService.isAdmin()" style="margin-bottom: 20px; display: flex; gap: 10px;">
     <button (click)="activeTab = 'my-leaves'" 
             [ngStyle]="{'background-color': activeTab === 'my-leaves' ? '#3f51b5' : '#e0e0e0', 'color': activeTab === 'my-leaves' ? 'white' : 'black'}" 
             style="padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
@@ -23,7 +23,7 @@
         <form [formGroup]="leaveForm" (ngSubmit)="onSubmit()">
           
           <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-            <div style="flex: 1;">
+            <div *ngIf="authService.isAdmin()" style="flex: 1;">
               <label style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee</label>
               <select class="form-control" formControlName="empId" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
                 <option [ngValue]="null" disabled selected>Select Employee...</option>
@@ -105,7 +105,7 @@
     </div>
   </div>
 
-  <div *ngIf="activeTab === 'manager-approvals'">
+  <div *ngIf="authService.isAdmin() && activeTab === 'manager-approvals'">
     <div class="card" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
       <div class="card-header" style="background-color: #f5f5f5; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">
         Pending Team Leaves

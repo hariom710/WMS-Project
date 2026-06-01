@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService } from '../services/api';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table'; 
+import { AuthService } from '../auth/auth';
+import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 
 @Component({
   selector: 'app-employees',
@@ -13,18 +14,21 @@ import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 })
 export class EmployeesComponent implements OnInit {
   employeeForm: FormGroup;
-  dataSource = new MatTableDataSource<any>(); 
+  dataSource = new MatTableDataSource<any>();
   departments: any[] = [];
   roles: any[] = [];
-  
-  displayedColumns: string[] = ['id', 'name', 'email', 'department', 'role', 'status', 'actions'];
 
+  displayedColumns: string[] = ['id', 'name', 'email', 'department', 'role', 'status'];
   isEditMode: boolean = false;
   currentEmployeeId: number | null = null;
 
-  constructor(private fb: FormBuilder, private api: ApiService) {
+  constructor(
+    private fb: FormBuilder,
+    private api: ApiService,
+    public authService: AuthService
+  ) {
     this.employeeForm = this.fb.group({
-      employeeId: [null], 
+      employeeId: [null],
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
@@ -39,11 +43,12 @@ export class EmployeesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (this.authService.isAdmin()) {
+      this.displayedColumns.push('actions');
+    }
     this.loadData();
 
-    // CUSTOM FILTER: Tells Angular to search nested Department and Role names
     this.dataSource.filterPredicate = (data: any, filter: string) => {
-      // Combine all searchable fields into one giant string
       const dataStr = [
         data.employeeId,
         data.firstName,
@@ -52,27 +57,23 @@ export class EmployeesComponent implements OnInit {
         data.department?.departmentName,
         data.role?.roleName
       ].join(' ').toLowerCase();
-
-      // Check if the search text exists in that string
       return dataStr.includes(filter);
     };
   }
 
   loadData() {
     this.api.getEmployees().subscribe(data => {
-      this.dataSource.data = data; // Assign data to the MatTableDataSource
+      this.dataSource.data = data;
     });
     this.api.getDepartments().subscribe(data => this.departments = data);
     this.api.getRoles().subscribe(data => this.roles = data);
   }
 
-  // --- SEARCH FILTER LOGIC ---
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;
     this.dataSource.filter = filterValue.trim().toLowerCase();
   }
 
-  // --- EDIT LOGIC ---
   editEmployee(emp: any) {
     this.isEditMode = true;
     this.currentEmployeeId = emp.employeeId;
@@ -94,7 +95,7 @@ export class EmployeesComponent implements OnInit {
       status: emp.status
     });
 
-    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   cancelEdit() {
@@ -103,43 +104,32 @@ export class EmployeesComponent implements OnInit {
     this.employeeForm.reset({ gender: 'M', status: 'Active', departmentId: null, roleId: null });
   }
 
-  // --- SUBMIT LOGIC ---
-  // --- SUBMIT LOGIC ---
   onSubmit() {
     if (this.employeeForm.valid) {
-      
-      // 1. Create a clean copy of the form data
-      const payload = { ...this.employeeForm.value };
-      
-      // 2. Ensure dropdown IDs are numbers (HTML selects sometimes pass strings)
+      const payload: any = { ...this.employeeForm.value };
       payload.departmentId = Number(payload.departmentId);
       payload.roleId = Number(payload.roleId);
 
       if (this.isEditMode && this.currentEmployeeId) {
-        // UPDATE EXISTING EMPLOYEE
-        // Keep the employeeId in the payload for updates
         this.api.updateEmployee(this.currentEmployeeId, payload).subscribe({
           next: () => {
             alert('Employee details updated successfully!');
             this.cancelEdit();
-            this.loadData(); 
+            this.loadData();
           },
-          error: (err: unknown) => console.error('Error updating employee', err)
+          error: (err: unknown) => console.error(err)
         });
       } else {
-        // CREATE NEW EMPLOYEE
-        // 3. THE FIX: Delete the empty ID so C# doesn't crash!
         delete payload.employeeId;
-
         this.api.addEmployee(payload).subscribe({
           next: () => {
             alert('Employee added! Their login (Email & Welcome@123) was auto-generated.');
             this.cancelEdit();
-            this.loadData(); 
+            this.loadData();
           },
           error: (err: unknown) => {
-            console.error('Error adding employee', err);
-            alert('Failed to add employee. Check console.');
+            console.error(err);
+            alert('Failed to add employee.');
           }
         });
       }

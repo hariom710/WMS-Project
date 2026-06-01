@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WMS.API.Data;
-using WMS.API.Models;
+using WMS.Domain.Models;
 
 namespace WMS.API.Controllers
 {
@@ -26,6 +26,7 @@ namespace WMS.API.Controllers
         }
 
         // POST: api/Roles
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Role>> PostRole(Role role)
         {
@@ -36,6 +37,7 @@ namespace WMS.API.Controllers
         }
 
         // PUT: api/Roles/5
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutRole(int id, Role role)
         {
@@ -48,6 +50,7 @@ namespace WMS.API.Controllers
         }
 
         // DELETE: api/Roles/5
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRole(int id)
         {

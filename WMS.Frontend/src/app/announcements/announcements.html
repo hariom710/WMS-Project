@@ -1,9 +1,9 @@
 <div class="container mt-4" style="padding: 20px; font-family: Roboto, sans-serif;">
   <h2 style="color: #3f51b5; margin-bottom: 20px;">System Notice Board</h2>
   
-  <div class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+  <div *ngIf="authService.isAdmin()" class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
     <div class="card-header text-white" style="background-color: #e91e63; padding: 15px; font-weight: bold; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-      {{ isEditMode ? '✏️ Edit Broadcast Notice' : '📢 Broadcast New Notice' }}
+      {{ isEditMode ? 'Edit Broadcast Notice' : 'Broadcast New Notice' }}
     </div>
     <div class="card-body" style="padding: 20px;">
       <form [formGroup]="alertForm" (ngSubmit)="onSubmit()">
@@ -54,7 +54,7 @@
           </small>
         </div>
         
-        <div style="display: flex; gap: 8px;">
+        <div *ngIf="authService.isAdmin()" style="display: flex; gap: 8px;">
           <button (click)="editAlert(alert)" style="background: #ffb300; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Edit</button>
           <button (click)="deleteAlert(alert.announcementId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Delete</button>
         </div>

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace WMS.API.Models
+namespace WMS.Domain.Models
 {
     public class Department
     {

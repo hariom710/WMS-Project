@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService } from '../services/api';
+import { AuthService } from '../auth/auth';
 
 @Component({
   selector: 'app-allocations',
@@ -15,7 +16,11 @@ export class AllocationsComponent implements OnInit {
   employees: any[] = [];
   projects: any[] = [];
 
-  constructor(private fb: FormBuilder, private api: ApiService) {
+  constructor(
+    private fb: FormBuilder,
+    private api: ApiService,
+    public authService: AuthService
+  ) {
     this.allocationForm = this.fb.group({
       empId: [null, Validators.required],
       projectId: [null, Validators.required],
@@ -28,16 +33,11 @@ export class AllocationsComponent implements OnInit {
   }
 
   loadData() {
-    // Load existing allocations for the table
     this.api.getAllocations().subscribe(data => this.allocations = data);
-    
-    // Load dropdown data
     this.api.getEmployees().subscribe(data => this.employees = data);
-    
-    // Only allow assignment to projects that are actually "Active"
     this.api.getProjects().subscribe(data => {
       this.projects = data.filter((p: any) => p.status === 'Active');
-    }); 
+    });
   }
 
   deleteAllocation(id: number) {
@@ -57,7 +57,7 @@ export class AllocationsComponent implements OnInit {
           this.allocationForm.reset({ assignedOn: new Date().toISOString().split('T')[0] });
           this.loadData();
         },
-        error: (err) => alert(err.error?.message || 'Error assigning employee. Check console.')
+        error: (err) => alert(err.error?.message || 'Error assigning employee.')
       });
     }
   }

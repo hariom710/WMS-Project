@@ -19,15 +19,19 @@ namespace WMS.API.Controllers
             _context = context;
         }
 
-        // GET: api/Leaves (My History)
+        public class RejectRequest
+        {
+            public string? Reason { get; set; }
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Leave>>> GetLeaves()
         {
             return await _context.Leaves.Include(l => l.Employee).OrderByDescending(l => l.AppliedOn).ToListAsync();
         }
 
-        // GET: api/Leaves/pending (For Managers)
         [HttpGet("pending")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<ActionResult<IEnumerable<Leave>>> GetPendingLeaves()
         {
             return await _context.Leaves
@@ -37,10 +41,19 @@ namespace WMS.API.Controllers
                 .ToListAsync();
         }
 
-        // POST: api/Leaves
         [HttpPost]
         public async Task<ActionResult<Leave>> PostLeave(Leave leave)
         {
+            if (leave.FromDate >= leave.ToDate)
+            {
+                return BadRequest(new { message = "ToDate must be after FromDate." });
+            }
+
+            if (leave.FromDate < DateTime.Now.Date)
+            {
+                return BadRequest(new { message = "Leave cannot start in the past." });
+            }
+
             var userEmail = User.FindFirst(ClaimTypes.Name)?.Value;
             var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Email == userEmail);
 
@@ -54,8 +67,8 @@ namespace WMS.API.Controllers
             return CreatedAtAction(nameof(GetLeaves), new { id = leave.LeaveId }, leave);
         }
 
-        // PUT: api/Leaves/approve/5
         [HttpPut("approve/{id}")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ApproveLeave(int id)
         {
             var leave = await _context.Leaves.FindAsync(id);
@@ -72,9 +85,9 @@ namespace WMS.API.Controllers
             return Ok(new { message = "Leave Approved!" });
         }
 
-        // PUT: api/Leaves/reject/5
         [HttpPut("reject/{id}")]
-        public async Task<IActionResult> RejectLeave(int id)
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> RejectLeave(int id, [FromBody] RejectRequest? request)
         {
             var leave = await _context.Leaves.FindAsync(id);
             if (leave == null) return NotFound();
@@ -87,10 +100,10 @@ namespace WMS.API.Controllers
             leave.ApprovedOn = DateTime.Now;
 
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Leave Rejected!" });
+            var msg = string.IsNullOrEmpty(request?.Reason) ? "Leave Rejected!" : $"Leave Rejected. Reason: {request.Reason}";
+            return Ok(new { message = msg });
         }
 
-        // DELETE: api/Leaves/5 (Cancel Leave)
         [HttpDelete("{id}")]
         public async Task<IActionResult> CancelLeave(int id)
         {

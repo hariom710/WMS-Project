@@ -1,104 +1,111 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { ApiService } from '../services/api';
+import { AuthService } from '../auth/auth';
+import { MatTableModule } from '@angular/material/table';
+
+const dateRangeValidator: ValidatorFn = (form: AbstractControl): ValidationErrors | null => {
+    const start = form.get('fromDate')?.value;
+    const end = form.get('toDate')?.value;
+    if (start && end && new Date(end) < new Date(start)) {
+      return { dateRange: true };
+    }
+    return null;
+};
 
 @Component({
   selector: 'app-leaves',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './leaves.html'
+  imports: [CommonModule, MatTableModule, ReactiveFormsModule],
+  templateUrl: './leaves.html',
+  styleUrls: ['./leaves.css']
 })
 export class LeavesComponent implements OnInit {
   leaveForm: FormGroup;
   leaves: any[] = [];
   pendingTeamLeaves: any[] = [];
-  
-  // NEW: Array to hold your employees for the dropdown
   employees: any[] = [];
-  
-  // Controls which screen is currently visible
-  activeTab: 'my-leaves' | 'manager-approvals' = 'my-leaves';
+  activeTab: string = 'my-leaves';
 
-  constructor(private fb: FormBuilder, private api: ApiService) {
+  constructor(
+    private fb: FormBuilder,
+    private api: ApiService,
+    public authService: AuthService
+  ) {
     this.leaveForm = this.fb.group({
-      empId: [null, Validators.required], // <-- NEW: Employee ID field added
-      leaveType: ['Sick', Validators.required],
+      empId: [null],
+      leaveType: ['', Validators.required],
       fromDate: ['', Validators.required],
       toDate: ['', Validators.required],
-      reason: ['', Validators.required]
-    });
+      reason: ['', [Validators.required, Validators.maxLength(500)]]
+    }, { validators: dateRangeValidator });
   }
 
   ngOnInit(): void {
-    this.loadMyLeaves();
-    this.loadPendingLeaves();
-    
-    // NEW: Fetch employees from the backend when the page loads
-    this.api.getEmployees().subscribe(data => this.employees = data);
-  }
-
-  loadMyLeaves() {
-    this.api.getLeaves().subscribe(data => this.leaves = data);
-  }
-
-  loadPendingLeaves() {
-    this.api.getPendingLeaves().subscribe(data => this.pendingTeamLeaves = data);
-  }
-
-  // --- EMPLOYEE ACTION ---
-  onSubmit() {
-    if (this.leaveForm.valid) {
-      
-      // Ensure empId is sent as a number
-      const payload = { ...this.leaveForm.value };
-      payload.empId = Number(payload.empId);
-
-      this.api.applyLeave(payload).subscribe({
-        next: () => {
-          alert('Leave Application Submitted Successfully!');
-          this.leaveForm.reset({ leaveType: 'Sick', empId: null });
-          this.loadMyLeaves();
-          this.loadPendingLeaves(); // Refresh manager queue
-        },
-        error: (err) => alert('Failed to submit application.')
-      });
-    } else {
-      alert('Please fill out all required fields.');
+    this.loadLeaves();
+    if (this.authService.isAdmin()) {
+      this.loadEmployees();
+      this.loadPendingLeaves();
     }
   }
 
+  loadLeaves() {
+    this.api.getLeaves().subscribe({
+      next: (data) => this.leaves = data,
+      error: (err) => console.error(err)
+    });
+  }
+
+  loadEmployees() {
+    this.api.getEmployees().subscribe({
+      next: (data) => this.employees = data,
+      error: (err) => console.error(err)
+    });
+  }
+
+  loadPendingLeaves() {
+    this.api.getPendingLeaves().subscribe({
+      next: (data) => this.pendingTeamLeaves = data,
+      error: (err) => console.error(err)
+    });
+  }
+
   cancelLeave(id: number) {
-    if (confirm("Are you sure you want to cancel this leave application?")) {
+    if (confirm('Cancel this leave request?')) {
       this.api.cancelLeave(id).subscribe({
-        next: () => {
-          this.loadMyLeaves();
-          this.loadPendingLeaves();
-        },
+        next: () => this.loadLeaves(),
         error: (err) => alert(err.error?.message || 'Error cancelling leave.')
       });
     }
   }
 
-  // --- MANAGER ACTIONS ---
   approveLeave(id: number) {
-    this.api.approveLeave(id).subscribe({
-      next: () => {
-        this.loadPendingLeaves();
-        this.loadMyLeaves();
-      },
-      error: () => alert('Error approving leave.')
-    });
+    if (confirm('Approve this leave request?')) {
+      this.api.approveLeave(id).subscribe({
+        next: () => { this.loadLeaves(); this.loadPendingLeaves(); },
+        error: (err) => alert(err.error?.message || 'Error approving leave.')
+      });
+    }
   }
 
   rejectLeave(id: number) {
-    if(confirm("Are you sure you want to reject this leave request?")) {
-      this.api.rejectLeave(id).subscribe({
+    const reason = prompt('Enter rejection reason (optional):');
+    this.api.rejectLeave(id, reason || '').subscribe({
+      next: () => { this.loadLeaves(); this.loadPendingLeaves(); },
+      error: (err) => alert(err.error?.message || 'Error rejecting leave.')
+    });
+  }
+
+  onSubmit() {
+    if (this.leaveForm.valid) {
+      this.api.applyLeave(this.leaveForm.value).subscribe({
         next: () => {
-          this.loadPendingLeaves();
-          this.loadMyLeaves();
+          alert('Leave request submitted successfully!');
+          this.leaveForm.reset();
+          this.loadLeaves();
         },
-        error: () => alert('Error rejecting leave.')
+        error: (err) => alert(err.error?.message || 'Error applying leave.')
       });
     }
   }

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService } from '../services/api';
+import { AuthService } from '../auth/auth';
 import { MatTableModule } from '@angular/material/table';
 
 @Component({
@@ -13,65 +14,86 @@ import { MatTableModule } from '@angular/material/table';
 export class ClientsComponent implements OnInit {
   clientForm: FormGroup;
   clients: any[] = [];
-  
-  displayedColumns: string[] = ['name', 'phone', 'location', 'status', 'actions'];
+  displayedColumns: string[] = ['name', 'phone', 'location', 'status'];
   isEditMode: boolean = false;
   currentClientId: number | null = null;
 
-  constructor(private fb: FormBuilder, private api: ApiService) {
+  constructor(
+    private fb: FormBuilder,
+    private api: ApiService,
+    public authService: AuthService
+  ) {
     this.clientForm = this.fb.group({
-      clientId: [null],
       clientName: ['', Validators.required],
-      clientPhoneNumber: [''],
-      clientLocation: [''],
-      clientAddress: [''],
-      status: [true]
+      clientPhoneNumber: ['', Validators.required],
+      clientLocation: ['', Validators.required],
+      clientAddress: ['', Validators.required]
     });
   }
 
   ngOnInit(): void {
+    if (this.authService.isAdmin()) {
+      this.displayedColumns.push('actions');
+    }
     this.loadClients();
   }
 
   loadClients() {
-    this.api.getClients().subscribe(data => this.clients = data);
+    this.api.getClients().subscribe({
+      next: (data) => this.clients = data,
+      error: (err) => console.error(err)
+    });
   }
 
   editClient(client: any) {
     this.isEditMode = true;
     this.currentClientId = client.clientId;
-    this.clientForm.patchValue(client);
+    this.clientForm.patchValue({
+      clientName: client.clientName,
+      clientPhoneNumber: client.clientPhoneNumber,
+      clientLocation: client.clientLocation,
+      clientAddress: client.clientAddress
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   cancelEdit() {
     this.isEditMode = false;
     this.currentClientId = null;
-    this.clientForm.reset({ status: true });
+    this.clientForm.reset();
   }
 
   deleteClient(id: number) {
-    if(confirm("Are you sure you want to delete this client?")) {
-      this.api.deleteClient(id).subscribe(() => this.loadClients());
+    if (confirm("Delete this client record permanently?")) {
+      this.api.deleteClient(id).subscribe({
+        next: () => this.loadClients(),
+        error: (err) => alert('Error deleting client.')
+      });
     }
   }
 
   onSubmit() {
     if (this.clientForm.valid) {
-      const formData = { ...this.clientForm.value };
-
       if (this.isEditMode && this.currentClientId) {
-        this.api.updateClient(this.currentClientId, formData).subscribe(() => {
-          alert('Client updated!');
-          this.cancelEdit();
-          this.loadClients();
+        this.api.updateClient(this.currentClientId, this.clientForm.value).subscribe({
+          next: () => {
+            alert('Client updated!');
+            this.cancelEdit();
+            this.loadClients();
+          },
+          error: (err) => alert('Update failed.')
         });
       } else {
-        delete formData.clientId; // Prevent ID null crash on insert
-        this.api.addClient(formData).subscribe(() => {
-          alert('Client added!');
-          this.clientForm.reset({ status: true });
-          this.loadClients();
+        this.api.addClient(this.clientForm.value).subscribe({
+          next: () => {
+            alert('Client added successfully!');
+            this.clientForm.reset();
+            this.loadClients();
+          },
+          error: (err) => {
+            console.error(err);
+            alert('Failed to add client.');
+          }
         });
       }
     }

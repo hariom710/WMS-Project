@@ -1,5 +1,4 @@
-﻿using WMS.API.Models;
-using WMS.Domain.Models;
+﻿using WMS.Domain.Models;
 
 namespace WMS.API.Interfaces
 {

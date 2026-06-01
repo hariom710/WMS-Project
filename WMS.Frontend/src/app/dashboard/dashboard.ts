@@ -16,6 +16,7 @@ export class DashboardComponent implements OnInit {
   
   // 1. Summary Cards Data
   totalEmployees = 0;
+  totalDepartments = 0;
   presentToday = 0;
   activeProjects = 0;
   pendingLeaves = 0;
@@ -28,6 +29,7 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     // Fetch KPI Data
     this.api.getEmployees().subscribe(data => this.totalEmployees = data.length);
+    this.api.getDepartments().subscribe(data => this.totalDepartments = data.length);
     
     this.api.getProjects().subscribe(data => {
       this.activeProjects = data.filter((p: any) => p.status === 'Active').length;

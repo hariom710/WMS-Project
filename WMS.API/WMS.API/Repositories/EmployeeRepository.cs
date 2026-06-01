@@ -2,7 +2,6 @@
 using WMS.API.Data;
 using WMS.API.Interfaces;
 using WMS.Domain.Models;
-using WMS.API.Models;
 
 namespace WMS.API.Repositories
 {

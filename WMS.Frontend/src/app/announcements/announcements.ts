@@ -2,24 +2,28 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService } from '../services/api';
+import { AuthService } from '../auth/auth';
+import { MatTableModule } from '@angular/material/table';
 
 @Component({
   selector: 'app-announcements',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './announcements.html'
+  imports: [CommonModule, MatTableModule, ReactiveFormsModule],
+  templateUrl: './announcements.html',
+  styleUrls: ['./announcements.css']
 })
 export class AnnouncementsComponent implements OnInit {
   alertForm: FormGroup;
   alerts: any[] = [];
-  
-  // Form State
   isEditMode: boolean = false;
-  currentAlertId: number | null = null;
+  currentAnnouncementId: number | null = null;
 
-  constructor(private fb: FormBuilder, private api: ApiService) {
+  constructor(
+    private fb: FormBuilder,
+    private api: ApiService,
+    public authService: AuthService
+  ) {
     this.alertForm = this.fb.group({
-      announcementId: [null], // Required for updates
       title: ['', Validators.required],
       message: ['', Validators.required],
       isActive: [true]
@@ -27,77 +31,66 @@ export class AnnouncementsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadAlerts();
+    this.loadAnnouncements();
   }
 
-  loadAlerts() {
-    this.api.getAlerts().subscribe(data => this.alerts = data);
+  loadAnnouncements() {
+    this.api.getAlerts().subscribe({
+      next: (data) => this.alerts = data,
+      error: (err) => console.error(err)
+    });
   }
 
-  // --- EDIT LOGIC ---
   editAlert(alert: any) {
     this.isEditMode = true;
-    this.currentAlertId = alert.announcementId;
-    
+    this.currentAnnouncementId = alert.announcementId;
     this.alertForm.patchValue({
-      announcementId: alert.announcementId,
       title: alert.title,
       message: alert.message,
       isActive: alert.isActive
     });
-    
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   cancelEdit() {
     this.isEditMode = false;
-    this.currentAlertId = null;
+    this.currentAnnouncementId = null;
     this.alertForm.reset({ isActive: true });
   }
 
-  // --- DELETE LOGIC ---
   deleteAlert(id: number) {
-    if(confirm("Are you sure you want to permanently delete this notice?")) {
+    if (confirm("Permanently delete this announcement?")) {
       this.api.deleteAnnouncement(id).subscribe({
-        next: () => this.loadAlerts(),
-        error: (err) => alert('Error deleting announcement')
+        next: () => this.loadAnnouncements(),
+        error: (err) => alert(err.error?.message)
       });
     }
   }
 
-  // --- SUBMIT LOGIC ---
   onSubmit() {
     if (this.alertForm.valid) {
-      // Create a copy of the form data
-      const payload = { ...this.alertForm.value };
-
-      if (this.isEditMode && this.currentAlertId) {
-        // UPDATE EXISTING
-        this.api.updateAnnouncement(this.currentAlertId, payload).subscribe({
+      if (this.isEditMode && this.currentAnnouncementId) {
+        this.api.updateAnnouncement(this.currentAnnouncementId, this.alertForm.value).subscribe({
           next: () => {
-            alert('System Announcement Updated!');
+            alert('Announcement updated!');
             this.cancelEdit();
-            this.loadAlerts();
+            this.loadAnnouncements();
           },
-          error: (err) => alert('Error updating announcement: ' + (err.error?.title || err.message))
+          error: (err) => alert('Failed to update.')
         });
       } else {
-        // CREATE NEW
-        // CRITICAL FIX: Remove the null ID so C# model validation doesn't crash!
-        delete payload.announcementId;
-
-        this.api.addAnnouncement(payload).subscribe({
+        this.api.addAnnouncement(this.alertForm.value).subscribe({
           next: () => {
-            alert('System Announcement Posted!');
+            alert('Announcement posted successfully!');
             this.alertForm.reset({ isActive: true });
-            this.loadAlerts(); 
+            this.loadAnnouncements();
           },
-          error: (err) => alert('Error posting announcement: ' + (err.error?.title || err.message))
+          error: (err) => {
+            console.error(err);
+            alert('Failed to create announcement.');
+          }
         });
       }
-    } else {
-      // NO MORE SILENT FAILURES
-      alert("Please make sure both the Notice Title and Message Details are filled out!");
     }
   }
 }

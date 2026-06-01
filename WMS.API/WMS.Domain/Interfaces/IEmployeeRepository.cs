@@ -1,5 +1,4 @@
 ﻿using WMS.Domain.Models;
-using WMS.API.Models; // For UserLogin
 
 namespace WMS.API.Interfaces
 {

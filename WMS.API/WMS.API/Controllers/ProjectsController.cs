@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WMS.API.Data;
 using WMS.Domain.Models;
@@ -7,6 +8,7 @@ namespace WMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ProjectsController : ControllerBase
     {
         private readonly WMSDbContext _context;
@@ -16,19 +18,19 @@ namespace WMS.API.Controllers
             _context = context;
         }
 
-        // GET: api/Projects
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
-            return await _context.Projects.ToListAsync();
+            return await _context.Projects
+                .Include(p => p.Client)
+                .OrderByDescending(p => p.ProjectId)
+                .ToListAsync();
         }
 
-        // POST: api/Projects
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Project>> PostProject(Project project)
         {
-            // ENTERPRISE FIX: Prevent Foreign Key crashes!
-            // If the Angular UI doesn't send a ClientId, prevent C# from defaulting to 0.
             if (project.ClientId == 0)
             {
                 project.ClientId = null;
@@ -40,7 +42,7 @@ namespace WMS.API.Controllers
             return CreatedAtAction(nameof(GetProjects), new { id = project.ProjectId }, project);
         }
 
-        // PUT: api/Projects/5
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutProject(int id, Project project)
         {
@@ -54,12 +56,18 @@ namespace WMS.API.Controllers
             return Ok(new { message = "Project updated successfully!" });
         }
 
-        // DELETE: api/Projects/5
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
             var project = await _context.Projects.FindAsync(id);
             if (project == null) return NotFound();
+
+            var hasAllocations = await _context.ProjectAllocations.AnyAsync(a => a.ProjectId == id);
+            if (hasAllocations)
+            {
+                return BadRequest(new { message = "Cannot delete project with active allocations." });
+            }
 
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();

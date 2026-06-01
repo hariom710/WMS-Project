@@ -1,21 +1,22 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace WMS.API.Models // Matching your existing namespace
+namespace WMS.Domain.Models
 {
     public class AuditLog
     {
         [Key]
         public int AuditId { get; set; }
 
-        public string EntityName { get; set; } // Table Updated
+        [Required, MaxLength(100)]
+        public string EntityName { get; set; }
 
-        public int RecordId { get; set; } // Affected Row
+        public int RecordId { get; set; }
 
-        [MaxLength(20)]
-        public string Action { get; set; } // Insert / Update / Delete
+        [Required, MaxLength(20)]
+        public string Action { get; set; }
 
-        public int CreatedBy { get; set; } // User who performed action
+        public int CreatedBy { get; set; }
 
         public DateTime CreatedOn { get; set; } = DateTime.Now;
     }

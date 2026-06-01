@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace WMS.API.Models
+namespace WMS.Domain.Models
 {
     public class UserLogin
     {

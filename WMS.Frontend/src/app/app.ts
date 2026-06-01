@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth/auth';
 
@@ -9,8 +9,20 @@ import { AuthService } from './auth/auth';
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App {
+export class App implements OnInit {
+  isAdmin = false;
+
   constructor(public authService: AuthService) {}
+
+  ngOnInit(): void {
+    this.authService.isLoggedIn.subscribe(loggedIn => {
+      if (loggedIn) {
+        this.isAdmin = this.authService.isAdmin();
+      } else {
+        this.isAdmin = false;
+      }
+    });
+  }
 
   onLogout(): void {
     this.authService.logout();

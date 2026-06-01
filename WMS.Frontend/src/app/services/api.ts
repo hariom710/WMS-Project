@@ -9,7 +9,7 @@ export class ApiService {
   private baseUrl = 'https://hariomwmsapi8501.azurewebsites.net/api';
   constructor(private http: HttpClient) { }
 
-  // ==========================cd
+  // ==========================
   // EMPLOYEES
   // ==========================
   getEmployees(): Observable<any> { 
@@ -93,6 +93,12 @@ export class ApiService {
   addProject(project: any): Observable<any> { 
     return this.http.post(`${this.baseUrl}/Projects`, project); 
   }
+  updateProject(id: number, project: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/Projects/${id}`, project);
+  }
+  deleteProject(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/Projects/${id}`);
+  }
 
   // ==========================
   // PROJECT ALLOCATIONS
@@ -125,8 +131,8 @@ export class ApiService {
   approveLeave(id: number): Observable<any> {
     return this.http.put(`${this.baseUrl}/Leaves/approve/${id}`, {});
   }
-  rejectLeave(id: number): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Leaves/reject/${id}`, {});
+  rejectLeave(id: number, reason?: string): Observable<any> {
+    return this.http.put(`${this.baseUrl}/Leaves/reject/${id}`, { reason });
   }
 
   // ==========================

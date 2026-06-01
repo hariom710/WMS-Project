@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace WMS.API.Models
+namespace WMS.Domain.Models
 {
     public class Attendance
     {
@@ -10,7 +10,7 @@ namespace WMS.API.Models
 
         [ForeignKey("Employee")]
         public int EmpId { get; set; }
-        public Employee? Employee { get; set; } // <-- Added the ? here
+        public Employee? Employee { get; set; }
 
         [Required]
         public DateTime CheckIn { get; set; }
@@ -18,7 +18,7 @@ namespace WMS.API.Models
 
         public float? TotalHours { get; set; }
 
-        [MaxLength(20)]
+        [Required, MaxLength(20)]
         public string WorkMode { get; set; }
 
         [Required]

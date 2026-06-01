@@ -9,7 +9,7 @@ namespace WMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // Ensure only logged-in users can post
+    [Authorize]
     public class AnnouncementsController : ControllerBase
     {
         private readonly WMSDbContext _context;
@@ -19,25 +19,23 @@ namespace WMS.API.Controllers
             _context = context;
         }
 
-        // GET: api/Announcements
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Announcement>>> GetAnnouncements()
         {
-            return await _context.Announcements.OrderByDescending(a => a.CreatedOn).ToListAsync();
+            return await _context.Announcements
+                .Include(a => a.CreatedByEmployee)
+                .OrderByDescending(a => a.CreatedOn)
+                .ToListAsync();
         }
 
-        // POST: api/Announcements
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Announcement>> PostAnnouncement(Announcement announcement)
         {
-            // 1. Get the currently logged-in user from the JWT Token
             var userEmail = User.FindFirst(ClaimTypes.Name)?.Value;
             var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Email == userEmail);
 
-            // 2. Fulfill the strict Capgemini database constraints!
             announcement.CreatedOn = DateTime.Now;
-
-            // If we found the logged-in admin, use their ID. Otherwise, fallback to ID 1 to prevent crashes.
             announcement.CreatedBy = employee != null ? employee.EmployeeId : 1;
 
             _context.Announcements.Add(announcement);
@@ -46,7 +44,7 @@ namespace WMS.API.Controllers
             return CreatedAtAction(nameof(GetAnnouncements), new { id = announcement.AnnouncementId }, announcement);
         }
 
-        // PUT: api/Announcements/5
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutAnnouncement(int id, Announcement announcement)
         {
@@ -58,7 +56,7 @@ namespace WMS.API.Controllers
             return Ok(new { message = "Announcement updated!" });
         }
 
-        // DELETE: api/Announcements/5
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAnnouncement(int id)
         {

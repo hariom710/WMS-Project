@@ -8,7 +8,7 @@ namespace WMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // Secure the endpoint
+    [Authorize]
     public class ClientsController : ControllerBase
     {
         private readonly WMSDbContext _context;
@@ -24,6 +24,7 @@ namespace WMS.API.Controllers
             return await _context.Clients.ToListAsync();
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Client>> PostClient(Client client)
         {
@@ -32,6 +33,7 @@ namespace WMS.API.Controllers
             return CreatedAtAction(nameof(GetClients), new { id = client.ClientId }, client);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutClient(int id, Client client)
         {
@@ -42,6 +44,7 @@ namespace WMS.API.Controllers
             return Ok(new { message = "Client updated successfully!" });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteClient(int id)
         {

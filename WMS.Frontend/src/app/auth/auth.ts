@@ -8,7 +8,7 @@ import { BehaviorSubject, Observable, tap } from 'rxjs';
 })
 export class AuthService {
   private baseUrl = 'https://hariomwmsapi8501.azurewebsites.net/api/Auth';
-  
+
   private loggedIn = new BehaviorSubject<boolean>(this.hasToken());
 
   constructor(private http: HttpClient, private router: Router) { }
@@ -26,6 +26,7 @@ export class AuthService {
       tap((res: any) => {
         localStorage.setItem('jwt_token', res.token);
         localStorage.setItem('role_id', res.roleId);
+        localStorage.setItem('role', res.role);
         localStorage.setItem('username', res.username);
         this.loggedIn.next(true);
       })
@@ -35,6 +36,7 @@ export class AuthService {
   logout() {
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('role_id');
+    localStorage.removeItem('role');
     localStorage.removeItem('username');
     this.loggedIn.next(false);
     this.router.navigate(['/login']);
@@ -43,6 +45,17 @@ export class AuthService {
   getToken() {
     return localStorage.getItem('jwt_token');
   }
+
+  getRole(): string {
+    return localStorage.getItem('role') || '';
+  }
+
+  isAdmin(): boolean {
+    const role = this.getRole();
+    const roleId = localStorage.getItem('role_id');
+    return role === 'Admin' || roleId === '1';
+  }
+
   changePassword(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/change-password`, data);
   }

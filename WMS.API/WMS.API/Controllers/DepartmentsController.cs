@@ -1,13 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WMS.API.Data;
-using WMS.API.Models;
-using System; // Required for DateTime
+using WMS.Domain.Models;
 
 namespace WMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class DepartmentsController : ControllerBase
     {
         private readonly WMSDbContext _context;
@@ -17,27 +18,33 @@ namespace WMS.API.Controllers
             _context = context;
         }
 
-        // GET: api/Departments
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Department>>> GetDepartments()
+        public async Task<ActionResult<IEnumerable<Department>>> GetDepartments(
+            [FromQuery] string? search)
         {
-            return await _context.Departments.ToListAsync();
+            var query = _context.Departments.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.ToLower();
+                query = query.Where(d => d.DepartmentName.ToLower().Contains(term));
+            }
+
+            return await query.OrderBy(d => d.DepartmentName).ToListAsync();
         }
 
-        // POST: api/Departments
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Department>> PostDepartment(Department department)
         {
-            // ENTERPRISE FIX: Prevent SQL Server DateTime crash by setting the time right now!
             department.CreatedOn = DateTime.Now;
-
             _context.Departments.Add(department);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetDepartments), new { id = department.DepartmentId }, department);
         }
 
-        // PUT: api/Departments/5
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutDepartment(int id, Department department)
         {
@@ -46,18 +53,14 @@ namespace WMS.API.Controllers
                 return BadRequest(new { message = "ID mismatch." });
             }
 
-            // Ensure the creation date is preserved during an update
             _context.Entry(department).State = EntityState.Modified;
-
-            // We tell EF Core NOT to modify the CreatedOn column during an update
             _context.Entry(department).Property(x => x.CreatedOn).IsModified = false;
-
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Department updated successfully!" });
         }
 
-        // DELETE: api/Departments/5
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDepartment(int id)
         {
@@ -67,7 +70,6 @@ namespace WMS.API.Controllers
                 return NotFound();
             }
 
-            // ENTERPRISE SAFEGUARD: Prevent deletion if employees are assigned
             var hasEmployees = await _context.Employees.AnyAsync(e => e.DepartmentId == id);
             if (hasEmployees)
             {

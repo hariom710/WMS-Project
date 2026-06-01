@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using WMS.API.Models;
 
 namespace WMS.Domain.Models;
 
@@ -13,13 +12,13 @@ public class Leave
     [Required]
     public int EmpId { get; set; }
 
-    // Creates the Foreign Key relationship to Employee
     [ForeignKey("EmpId")]
     public virtual Employee? Employee { get; set; }
 
-    [Required]
+    [Required, MaxLength(20)]
     public string LeaveType { get; set; } // Sick/Casual/Earned
 
+    [Required, MaxLength(500)]
     public string Reason { get; set; }
 
     [Required]
@@ -28,12 +27,12 @@ public class Leave
     [Required]
     public DateTime ToDate { get; set; }
 
+    [Required, MaxLength(20)]
     public string Status { get; set; } = "Pending";
 
-    // Capgemini tracking requirements
     public DateTime AppliedOn { get; set; } = DateTime.Now;
 
-    public int? ApprovedBy { get; set; } // Nullable, as it is pending
+    public int? ApprovedBy { get; set; }
 
-    public DateTime? ApprovedOn { get; set; } // Nullable
+    public DateTime? ApprovedOn { get; set; }
 }

@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using System.Security.Claims;
 using WMS.API.Data;
-using WMS.API.Models;
 using WMS.Domain.Models;
 
 namespace WMS.API.Controllers
@@ -25,12 +24,14 @@ namespace WMS.API.Controllers
         // ADMIN ENDPOINTS (Used by your Angular UI)
         // ==========================================
 
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Attendance>>> GetAttendances()
         {
             return await _context.Attendances.Include(a => a.Employee).ToListAsync();
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("monthly")]
         public async Task<ActionResult<IEnumerable<Attendance>>> GetMonthlyAttendance([FromQuery] int month, [FromQuery] int year)
         {
@@ -46,6 +47,7 @@ namespace WMS.API.Controllers
             return Ok(monthlyData);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Attendance>> PostAttendance(Attendance attendance)
         {
@@ -58,6 +60,7 @@ namespace WMS.API.Controllers
             return Ok(new { message = "Clocked in successfully!" });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutAttendance(int id, Attendance attendance)
         {
@@ -72,6 +75,7 @@ namespace WMS.API.Controllers
         // ==========================================
 
         // GET: api/Attendance/timesheet/5 (Old JSON endpoint for reference)
+        [Authorize(Roles = "Admin")]
         [HttpGet("timesheet/{empId}")]
         public async Task<IActionResult> GetTimesheet(int empId)
         {
@@ -94,6 +98,7 @@ namespace WMS.API.Controllers
         }
 
         // NEW: GET api/Attendance/timesheet/pdf/5 (Generates the QuestPDF File)
+        [Authorize(Roles = "Admin")]
         [HttpGet("timesheet/pdf/{empId}")]
         public async Task<IActionResult> DownloadTimesheetPdf(int empId)
         {
@@ -108,7 +113,15 @@ namespace WMS.API.Controllers
 
             if (!records.Any()) return NotFound("No attendance records found.");
 
-            var employeeName = records.First().Employee.FirstName + " " + records.First().Employee.LastName;
+            var employee = records.First().Employee;
+            var employeeName = employee.FirstName + " " + employee.LastName;
+
+            // Compute summary statistics
+            int totalDaysWorked = records.Count(r => r.CheckOut.HasValue);
+            double totalHoursWorked = (float)records.Where(r => r.TotalHours.HasValue).Sum(r => r.TotalHours);
+            double avgHoursPerDay = totalDaysWorked > 0 ? Math.Round(totalHoursWorked / totalDaysWorked, 2) : 0;
+            var modeBreakdown = records.GroupBy(r => r.WorkMode ?? "Office")
+                                       .ToDictionary(g => g.Key, g => g.Count());
 
             var document = QuestPDF.Fluent.Document.Create(container =>
             {
@@ -119,47 +132,103 @@ namespace WMS.API.Controllers
                     page.PageColor(QuestPDF.Helpers.Colors.White);
                     page.DefaultTextStyle(x => x.FontSize(11));
 
+                    // ── HEADER: Company Branding ──
                     page.Header().PaddingBottom(10).Column(col =>
                     {
-                        col.Item().Text($"Timesheet Report").SemiBold().FontSize(24).FontColor(QuestPDF.Helpers.Colors.Blue.Darken2);
-                        col.Item().Text($"Employee: {employeeName}").FontSize(14).FontColor(QuestPDF.Helpers.Colors.Grey.Darken3);
-                        col.Item().Text($"Generated On: {DateTime.Now:MMM dd, yyyy}").FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Medium);
+                        col.Item().Row(row =>
+                        {
+                            row.RelativeItem().Column(c =>
+                            {
+                                c.Item().Text("WMS - Workforce Management System").SemiBold().FontSize(20).FontColor(QuestPDF.Helpers.Colors.Blue.Darken3);
+                                c.Item().Text("Capgemini Project Portal").FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Medium);
+                            });
+                            row.ConstantItem(120).AlignRight().Column(c =>
+                            {
+                                c.Item().Text($"Date: {DateTime.Now:MMM dd, yyyy}").FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Darken2);
+                                c.Item().Text($"Ref: TS-{empId}-{DateTime.Now:yyyyMM}").FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Darken2);
+                            });
+                        });
+                        col.Item().PaddingTop(8).LineHorizontal(1).LineColor(QuestPDF.Helpers.Colors.Blue.Darken2);
                     });
 
-                    page.Content().Table(table =>
+                    // ── EMPLOYEE INFO ──
+                    page.Content().Column(col =>
                     {
-                        table.ColumnsDefinition(columns =>
+                        col.Item().PaddingBottom(12).Row(row =>
                         {
-                            columns.RelativeColumn();
-                            columns.RelativeColumn();
-                            columns.RelativeColumn();
-                            columns.RelativeColumn();
-                            columns.RelativeColumn();
+                            row.RelativeItem().Column(c =>
+                            {
+                                c.Item().Text($"Employee: {employeeName}").SemiBold().FontSize(14).FontColor(QuestPDF.Helpers.Colors.Grey.Darken4);
+                                c.Item().Text($"Email: {employee.Email}").FontSize(11).FontColor(QuestPDF.Helpers.Colors.Grey.Darken2);
+                            });
+                            row.ConstantItem(160).Column(c =>
+                            {
+                                c.Item().Background(QuestPDF.Helpers.Colors.Grey.Lighten4).Padding(8).Column(sum =>
+                                {
+                                    sum.Item().Text("Summary").SemiBold().FontSize(11).FontColor(QuestPDF.Helpers.Colors.Blue.Darken2);
+                                    sum.Item().Text($"Days Worked: {totalDaysWorked}").FontSize(10);
+                                    sum.Item().Text($"Total Hours: {totalHoursWorked:F1}").FontSize(10);
+                                    sum.Item().Text($"Avg / Day: {avgHoursPerDay} hrs").FontSize(10);
+                                });
+                            });
                         });
 
-                        table.Header(header =>
+                        // ── WORK MODE BREAKDOWN ──
+                        col.Item().PaddingBottom(10).Row(row =>
                         {
-                            header.Cell().BorderBottom(1).Padding(5).Text("Date").SemiBold();
-                            header.Cell().BorderBottom(1).Padding(5).Text("Work Mode").SemiBold();
-                            header.Cell().BorderBottom(1).Padding(5).Text("Check-In").SemiBold();
-                            header.Cell().BorderBottom(1).Padding(5).Text("Check-Out").SemiBold();
-                            header.Cell().BorderBottom(1).Padding(5).Text("Total Hrs").SemiBold();
+                            foreach (var mode in modeBreakdown)
+                            {
+                                row.RelativeItem().Border(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(8).Column(c =>
+                                {
+                                    c.Item().AlignCenter().Text(mode.Key).SemiBold().FontSize(11).FontColor(QuestPDF.Helpers.Colors.Blue.Darken2);
+                                    c.Item().AlignCenter().Text(mode.Value.ToString()).FontSize(18).FontColor(QuestPDF.Helpers.Colors.Grey.Darken4);
+                                });
+                            }
                         });
 
-                        foreach (var record in records)
+                        // ── ATTENDANCE TABLE ──
+                        col.Item().PaddingBottom(4).Text("Attendance Log").SemiBold().FontSize(13).FontColor(QuestPDF.Helpers.Colors.Grey.Darken3);
+
+                        col.Item().Table(table =>
                         {
-                            table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).Text(record.AttendanceDate.ToShortDateString());
-                            table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).Text(record.WorkMode ?? "Office");
-                            table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).Text(record.CheckIn.ToString("hh:mm tt"));
-                            table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).Text(record.CheckOut?.ToString("hh:mm tt") ?? "Pending");
-                            table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).Text(record.TotalHours.ToString());
-                        }
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                            });
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Background(QuestPDF.Helpers.Colors.Blue.Darken2).BorderBottom(1).Padding(5).Text("Date").SemiBold().FontColor(QuestPDF.Helpers.Colors.White);
+                                header.Cell().Background(QuestPDF.Helpers.Colors.Blue.Darken2).BorderBottom(1).Padding(5).Text("Work Mode").SemiBold().FontColor(QuestPDF.Helpers.Colors.White);
+                                header.Cell().Background(QuestPDF.Helpers.Colors.Blue.Darken2).BorderBottom(1).Padding(5).Text("Check-In").SemiBold().FontColor(QuestPDF.Helpers.Colors.White);
+                                header.Cell().Background(QuestPDF.Helpers.Colors.Blue.Darken2).BorderBottom(1).Padding(5).Text("Check-Out").SemiBold().FontColor(QuestPDF.Helpers.Colors.White);
+                                header.Cell().Background(QuestPDF.Helpers.Colors.Blue.Darken2).BorderBottom(1).Padding(5).Text("Total Hrs").SemiBold().FontColor(QuestPDF.Helpers.Colors.White);
+                            });
+
+                            foreach (var record in records)
+                            {
+                                table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).Text(record.AttendanceDate.ToShortDateString());
+                                table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).Text(record.WorkMode ?? "Office");
+                                table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).Text(record.CheckIn.ToString("hh:mm tt"));
+                                table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).Text(record.CheckOut?.ToString("hh:mm tt") ?? "Pending");
+                                table.Cell().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).Padding(5).AlignRight().Text(record.TotalHours.HasValue ? $"{record.TotalHours:F1}" : "-");
+                            }
+                        });
+
+                        // ── FOOTER NOTE ──
+                        col.Item().PaddingTop(12).Text("This is a system-generated timesheet report.").FontSize(9).FontColor(QuestPDF.Helpers.Colors.Grey.Medium).Italic();
                     });
 
                     page.Footer().AlignCenter().Text(x =>
                     {
                         x.Span("Page ");
                         x.CurrentPageNumber();
+                        x.Span(" of ");
+                        x.TotalPages();
                     });
                 });
             });

@@ -5,7 +5,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using WMS.API.Data;
-using WMS.API.Models;
 using WMS.Domain.Models;
 
 namespace WMS.API.Controllers
@@ -23,7 +22,6 @@ namespace WMS.API.Controllers
             _configuration = configuration;
         }
 
-        // --- DTOs ---
         public class LoginRequest
         {
             public string Username { get; set; }
@@ -37,36 +35,35 @@ namespace WMS.API.Controllers
             public string NewPassword { get; set; }
         }
 
-        // --- ENDPOINTS ---
-
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            // 1. Check if user exists in the database
-            var user = await _context.UserLogins.FirstOrDefaultAsync(u => u.Username == request.Username);
+            var user = await _context.UserLogins
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Username == request.Username);
 
-            // 2. SECURE: Verify the BCrypt Hashed Password
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 return Unauthorized(new { message = "Invalid Username or Password" });
             }
 
-            // 3. Update Last Login Time
             user.LastLogin = DateTime.Now;
             await _context.SaveChangesAsync();
 
-            // 4. Generate JWT Token
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
+            var roleName = user.Role?.RoleName ?? "Employee";
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[]
                 {
                     new Claim(ClaimTypes.Name, user.Username),
-                    new Claim(ClaimTypes.Role, user.RoleId.ToString())
+                    new Claim(ClaimTypes.Role, roleName),
+                    new Claim("roleId", user.RoleId.ToString()),
+                    new Claim("roleName", roleName)
                 }),
-                Expires = DateTime.UtcNow.AddHours(2), // Token valid for 2 hours
+                Expires = DateTime.UtcNow.AddHours(2),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"],
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -78,6 +75,7 @@ namespace WMS.API.Controllers
             {
                 token = tokenHandler.WriteToken(token),
                 username = user.Username,
+                role = roleName,
                 roleId = user.RoleId
             });
         }
@@ -85,21 +83,29 @@ namespace WMS.API.Controllers
         [HttpPost("setup-default-admin")]
         public async Task<IActionResult> SetupDefaultAdmin()
         {
-            // 1. Ensure an "Admin" role exists to prevent Foreign Key errors
             if (!await _context.Roles.AnyAsync(r => r.RoleName == "Admin"))
             {
                 _context.Roles.Add(new Role { RoleName = "Admin", Description = "System Administrator" });
                 await _context.SaveChangesAsync();
             }
 
-            var adminRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Admin");
+            if (!await _context.Roles.AnyAsync(r => r.RoleName == "Employee"))
+            {
+                _context.Roles.Add(new Role { RoleName = "Employee", Description = "Standard Employee" });
+                await _context.SaveChangesAsync();
+            }
 
-            // 2. Look for the existing admin
+            if (!await _context.Roles.AnyAsync(r => r.RoleName == "Manager"))
+            {
+                _context.Roles.Add(new Role { RoleName = "Manager", Description = "Team Manager" });
+                await _context.SaveChangesAsync();
+            }
+
+            var adminRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Admin");
             var existingAdmin = await _context.UserLogins.FirstOrDefaultAsync(u => u.Username == "admin");
 
             if (existingAdmin == null)
             {
-                // Create a brand new admin user
                 _context.UserLogins.Add(new UserLogin
                 {
                     Username = "admin",
@@ -108,31 +114,26 @@ namespace WMS.API.Controllers
                 });
 
                 await _context.SaveChangesAsync();
-                return Ok(new { message = "Success! Created new Admin. Username: admin | Password: admin123" });
+                return Ok(new { message = "Created Admin + Employee + Manager roles. Username: admin | Password: admin123" });
             }
             else
             {
-                // FIX: Overwrite the old plain-text password with the new BCrypt hash!
                 existingAdmin.PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123");
                 await _context.SaveChangesAsync();
-
-                return Ok(new { message = "Success! Updated existing Admin with secure hash. Username: admin | Password: admin123" });
+                return Ok(new { message = "Updated existing Admin with secure hash. Username: admin | Password: admin123" });
             }
         }
 
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
         {
-            // Find the user
             var user = await _context.UserLogins.FirstOrDefaultAsync(u => u.Username == request.Username);
 
-            // SECURE: Verify old password hash
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
             {
                 return BadRequest(new { message = "Invalid username or current password." });
             }
 
-            // SECURE: Hash the new password
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             await _context.SaveChangesAsync();
 

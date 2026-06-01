@@ -1,7 +1,7 @@
 <div class="container mt-4" style="padding: 20px;">
   <h2 style="color: #3f51b5; margin-bottom: 20px;">Resource Allocation</h2>
   
-  <div class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+  <div *ngIf="authService.isAdmin()" class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
     <div class="card-header text-white" style="background-color: #3f51b5; padding: 15px; font-weight: bold; border-top-left-radius: 8px; border-top-right-radius: 8px;">
       Assign Employee to Project
     </div>
@@ -56,12 +56,12 @@
             <th style="padding: 15px; border-bottom: 2px solid #ddd;">Employee</th>
             <th style="padding: 15px; border-bottom: 2px solid #ddd;">Assigned On</th>
             <th style="padding: 15px; border-bottom: 2px solid #ddd;">Assigned By</th>
-            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Actions</th>
+            <th *ngIf="authService.isAdmin()" style="padding: 15px; border-bottom: 2px solid #ddd;">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="allocations.length === 0">
-            <td colspan="5" style="padding: 20px; text-align: center; color: #888; font-style: italic;">
+            <td [attr.colspan]="authService.isAdmin() ? 5 : 4" style="padding: 20px; text-align: center; color: #888; font-style: italic;">
               No employees have been allocated to projects yet.
             </td>
           </tr>
@@ -70,7 +70,7 @@
             <td style="padding: 15px; font-weight: bold; color: #333;">{{ a.employee?.firstName }} {{ a.employee?.lastName }}</td>
             <td style="padding: 15px; color: #555;">{{ a.assignedOn | date:'mediumDate' }}</td>
             <td style="padding: 15px; color: #555;">{{ a.createdBy }}</td>
-            <td style="padding: 15px;">
+            <td *ngIf="authService.isAdmin()" style="padding: 15px;">
               <button (click)="deleteAllocation(a.allocationId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
                 Remove
               </button>
