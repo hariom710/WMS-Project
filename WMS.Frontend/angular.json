@@ -23,6 +23,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "web.config",
+                "input": "",
+                "output": "/"
               }
             ],
             "styles": ["src/material-theme.scss", "src/styles.css"]
