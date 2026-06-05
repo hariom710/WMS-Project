@@ -12,8 +12,8 @@ using WMS.Infrastructure.Data;
 namespace WMS.API.Migrations
 {
     [DbContext(typeof(WMSDbContext))]
-    [Migration("20260605194751_SoftDeleteAndAuditTrail")]
-    partial class SoftDeleteAndAuditTrail
+    [Migration("20260605203517_EnterpriseAuditAndPerformance")]
+    partial class EnterpriseAuditAndPerformance
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -37,7 +37,7 @@ namespace WMS.API.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("CreatedByEmployeeId")
+                    b.Property<int?>("CreatedByEmployeeId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedDate")
@@ -652,9 +652,7 @@ namespace WMS.API.Migrations
                 {
                     b.HasOne("WMS.Domain.Models.Employee", "CreatedByEmployee")
                         .WithMany()
-                        .HasForeignKey("CreatedByEmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CreatedByEmployeeId");
 
                     b.Navigation("CreatedByEmployee");
                 });

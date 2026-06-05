@@ -10,6 +10,9 @@ using WMS.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ── QuestPDF License ──
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 // Use User Secrets in Development
 if (builder.Environment.IsDevelopment())
 {

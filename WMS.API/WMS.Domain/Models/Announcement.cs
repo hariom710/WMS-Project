@@ -18,7 +18,7 @@ public class Announcement : BaseEntity
     [MinLength(10, ErrorMessage = "Message must be at least 10 characters.")]
     public string Message { get; set; }
 
-    public int CreatedByEmployeeId { get; set; }
+    public int? CreatedByEmployeeId { get; set; }
 
     [ForeignKey("CreatedByEmployeeId")]
     public virtual Employee? CreatedByEmployee { get; set; }

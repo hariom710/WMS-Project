@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WMS.API.Migrations
 {
     /// <inheritdoc />
-    public partial class SoftDeleteAndAuditTrail : Migration
+    public partial class EnterpriseAuditAndPerformance : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -506,8 +506,7 @@ namespace WMS.API.Migrations
                 name: "CreatedByEmployeeId",
                 table: "Announcements",
                 type: "int",
-                nullable: false,
-                defaultValue: 0);
+                nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "DeletedBy",
@@ -697,8 +696,7 @@ namespace WMS.API.Migrations
                 table: "Announcements",
                 column: "CreatedByEmployeeId",
                 principalTable: "Employees",
-                principalColumn: "EmployeeId",
-                onDelete: ReferentialAction.Cascade);
+                principalColumn: "EmployeeId");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Projects_Clients_ClientId",
