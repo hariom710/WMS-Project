@@ -1,9 +1,7 @@
 ## Build output
 publish/
 publish_api/
-api.zip
-backend.zip
-frontend.zip
+*.zip
 
 ## .NET
 *.dll
