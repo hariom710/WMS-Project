@@ -1,169 +1,387 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, catchError, retry, throwError } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { Employee, Department, Role, Attendance, Leave, Project, Allocation, Client, Announcement, DashboardSummary } from '../models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  private baseUrl = 'https://hariomwmsapi8501.azurewebsites.net/api';
+  private baseUrl = environment.apiUrl;
+
   constructor(private http: HttpClient) { }
+
+  private handleError(error: any) {
+    console.error('API Error:', error);
+    return throwError(() => error);
+  }
 
   // ==========================
   // EMPLOYEES
   // ==========================
-  getEmployees(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Employees`); 
+  getEmployees(): Observable<Employee[]> {
+    return this.http.get<Employee[]>(`${this.baseUrl}/Employees`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
-  addEmployee(employee: any): Observable<any> { 
-    return this.http.post(`${this.baseUrl}/Employees`, employee); 
+
+  addEmployee(employee: Partial<Employee>): Observable<any> {
+    return this.http.post(`${this.baseUrl}/Employees`, employee).pipe(
+      catchError(this.handleError)
+    );
   }
-  updateEmployee(id: number, employee: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Employees/${id}`, employee);
+
+  updateEmployee(id: number, employee: Partial<Employee>): Observable<any> {
+    return this.http.put(`${this.baseUrl}/Employees/${id}`, employee).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // ==========================
   // DEPARTMENTS
   // ==========================
-  getDepartments(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Departments`); 
+  getDepartments(): Observable<Department[]> {
+    return this.http.get<Department[]>(`${this.baseUrl}/Departments`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
-  addDepartment(department: any): Observable<any> { 
-    return this.http.post(`${this.baseUrl}/Departments`, department); 
+
+  addDepartment(department: Partial<Department>): Observable<any> {
+    return this.http.post(`${this.baseUrl}/Departments`, department).pipe(
+      catchError(this.handleError)
+    );
   }
-  updateDepartment(id: number, department: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Departments/${id}`, department);
+
+  updateDepartment(id: number, department: Partial<Department>): Observable<any> {
+    return this.http.put(`${this.baseUrl}/Departments/${id}`, department).pipe(
+      catchError(this.handleError)
+    );
   }
+
   deleteDepartment(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/Departments/${id}`);
+    return this.http.delete(`${this.baseUrl}/Departments/${id}`).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // ==========================
   // ROLES
   // ==========================
-  getRoles(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Roles`); 
+  getRoles(): Observable<Role[]> {
+    return this.http.get<Role[]>(`${this.baseUrl}/Roles`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
 
-// ==========================
+  // ==========================
   // ATTENDANCE
   // ==========================
-  getAttendances(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Attendance`); 
-  }
-  getMonthlyAttendance(month: number, year: number): Observable<any> {
-    return this.http.get(`${this.baseUrl}/Attendance/monthly?month=${month}&year=${year}`);
-  }
-  addAttendance(attendance: any): Observable<any> { 
-    return this.http.post(`${this.baseUrl}/Attendance`, attendance); 
-  }
-  updateAttendance(id: number, attendance: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Attendance/${id}`, attendance);
-  }
-  getTimesheet(empId: number): Observable<any> {
-    return this.http.get(`${this.baseUrl}/Attendance/timesheet/${empId}`);
+  getAttendances(): Observable<Attendance[]> {
+    return this.http.get<Attendance[]>(`${this.baseUrl}/Attendance`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
 
-  // ---> ADD THIS NEW PDF METHOD HERE <---
+  getMonthlyAttendance(month: number, year: number): Observable<Attendance[]> {
+    return this.http.get<Attendance[]>(`${this.baseUrl}/Attendance/monthly?month=${month}&year=${year}`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
+  }
+
+  addAttendance(attendance: Partial<Attendance>): Observable<any> {
+    return this.http.post(`${this.baseUrl}/Attendance`, attendance).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateAttendance(id: number, attendance: Partial<Attendance>): Observable<any> {
+    return this.http.put(`${this.baseUrl}/Attendance/${id}`, attendance).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getTimesheet(empId: number): Observable<any> {
+    return this.http.get(`${this.baseUrl}/Attendance/timesheet/${empId}`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
+  }
+
   downloadTimesheetPdf(empId: number): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/Attendance/timesheet/pdf/${empId}`, {
-      responseType: 'blob' // Required to handle PDF downloads properly
-    });
+      responseType: 'blob'
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // --- Self-Service Methods ---
-  getMyAttendance(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Attendance/my-attendance`); 
+  getMyAttendance(): Observable<Attendance[]> {
+    return this.http.get<Attendance[]>(`${this.baseUrl}/Attendance/my-attendance`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
+
   checkIn(workMode: string): Observable<any> {
     return this.http.post(`${this.baseUrl}/Attendance/check-in`, `"${workMode}"`, {
       headers: { 'Content-Type': 'application/json' }
-    });
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
+
   checkOut(): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Attendance/check-out`, {});
+    return this.http.put(`${this.baseUrl}/Attendance/check-out`, {}).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // ==========================
   // PROJECTS
   // ==========================
-  getProjects(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Projects`); 
+  getProjects(): Observable<Project[]> {
+    return this.http.get<Project[]>(`${this.baseUrl}/Projects`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
-  addProject(project: any): Observable<any> { 
-    return this.http.post(`${this.baseUrl}/Projects`, project); 
+
+  addProject(project: Partial<Project>): Observable<any> {
+    return this.http.post(`${this.baseUrl}/Projects`, project).pipe(
+      catchError(this.handleError)
+    );
   }
-  updateProject(id: number, project: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Projects/${id}`, project);
+
+  updateProject(id: number, project: Partial<Project>): Observable<any> {
+    return this.http.put(`${this.baseUrl}/Projects/${id}`, project).pipe(
+      catchError(this.handleError)
+    );
   }
+
   deleteProject(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/Projects/${id}`);
+    return this.http.delete(`${this.baseUrl}/Projects/${id}`).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // ==========================
   // PROJECT ALLOCATIONS
   // ==========================
-  getAllocations(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Allocations`); 
+  getAllocations(): Observable<Allocation[]> {
+    return this.http.get<Allocation[]>(`${this.baseUrl}/Allocations`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
-  addAllocation(allocation: any): Observable<any> { 
-    return this.http.post(`${this.baseUrl}/Allocations`, allocation); 
+
+  addAllocation(allocation: Partial<Allocation>): Observable<any> {
+    return this.http.post(`${this.baseUrl}/Allocations`, allocation).pipe(
+      catchError(this.handleError)
+    );
   }
+
   deleteAllocation(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/Allocations/${id}`);
+    return this.http.delete(`${this.baseUrl}/Allocations/${id}`).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // ==========================
   // LEAVES
   // ==========================
-  getLeaves(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Leaves`); 
+  getLeaves(): Observable<Leave[]> {
+    return this.http.get<Leave[]>(`${this.baseUrl}/Leaves`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
-  getPendingLeaves(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Leaves/pending`); 
+
+  getPendingLeaves(): Observable<Leave[]> {
+    return this.http.get<Leave[]>(`${this.baseUrl}/Leaves/pending`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
-  applyLeave(leave: any): Observable<any> { 
-    return this.http.post(`${this.baseUrl}/Leaves`, leave); 
+
+  applyLeave(leave: Partial<Leave>): Observable<any> {
+    return this.http.post(`${this.baseUrl}/Leaves`, leave).pipe(
+      catchError(this.handleError)
+    );
   }
+
   cancelLeave(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/Leaves/${id}`);
+    return this.http.delete(`${this.baseUrl}/Leaves/${id}`).pipe(
+      catchError(this.handleError)
+    );
   }
+
   approveLeave(id: number): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Leaves/approve/${id}`, {});
+    return this.http.put(`${this.baseUrl}/Leaves/approve/${id}`, {}).pipe(
+      catchError(this.handleError)
+    );
   }
+
   rejectLeave(id: number, reason?: string): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Leaves/reject/${id}`, { reason });
+    return this.http.put(`${this.baseUrl}/Leaves/reject/${id}`, { reason }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // ==========================
   // ANNOUNCEMENTS
   // ==========================
-  getAlerts(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Announcements`); 
+  getAlerts(): Observable<Announcement[]> {
+    return this.http.get<Announcement[]>(`${this.baseUrl}/Announcements`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
-  addAnnouncement(announcement: any): Observable<any> { 
-    return this.http.post(`${this.baseUrl}/Announcements`, announcement); 
+
+  addAnnouncement(announcement: Partial<Announcement>): Observable<any> {
+    return this.http.post(`${this.baseUrl}/Announcements`, announcement).pipe(
+      catchError(this.handleError)
+    );
   }
-  updateAnnouncement(id: number, announcement: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Announcements/${id}`, announcement);
+
+  updateAnnouncement(id: number, announcement: Partial<Announcement>): Observable<any> {
+    return this.http.put(`${this.baseUrl}/Announcements/${id}`, announcement).pipe(
+      catchError(this.handleError)
+    );
   }
+
   deleteAnnouncement(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/Announcements/${id}`);
+    return this.http.delete(`${this.baseUrl}/Announcements/${id}`).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // ==========================
   // CLIENTS
   // ==========================
-  getClients(): Observable<any> { 
-    return this.http.get(`${this.baseUrl}/Clients`); 
+  getClients(): Observable<Client[]> {
+    return this.http.get<Client[]>(`${this.baseUrl}/Clients`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
-  addClient(client: any): Observable<any> { 
-    return this.http.post(`${this.baseUrl}/Clients`, client); 
+
+  addClient(client: Partial<Client>): Observable<any> {
+    return this.http.post(`${this.baseUrl}/Clients`, client).pipe(
+      catchError(this.handleError)
+    );
   }
-  updateClient(id: number, client: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/Clients/${id}`, client);
+
+  updateClient(id: number, client: Partial<Client>): Observable<any> {
+    return this.http.put(`${this.baseUrl}/Clients/${id}`, client).pipe(
+      catchError(this.handleError)
+    );
   }
+
   deleteClient(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/Clients/${id}`);
+    return this.http.delete(`${this.baseUrl}/Clients/${id}`).pipe(
+      catchError(this.handleError)
+    );
   }
+
+  // ==========================
+  // DASHBOARD
+  // ==========================
+  getDashboardSummary(): Observable<DashboardSummary> {
+    return this.http.get<DashboardSummary>(`${this.baseUrl}/Dashboard/summary`).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
+  }
+
+  // ==========================
+  // REPORTS / EXPORTS
+  // ==========================
+  private buildParams(params: Record<string, any>): string {
+    const parts: string[] = [];
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== null && value !== undefined && value !== '') {
+        parts.push(`${key}=${encodeURIComponent(value)}`);
+      }
+    }
+    return parts.length ? '?' + parts.join('&') : '';
+  }
+
+  downloadBlob(blob: Blob, filename: string) {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
+
+  exportEmployeesExcel(search?: string, status?: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/employees/excel${this.buildParams({ search, status })}`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  exportEmployeesPdf(search?: string, status?: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/employees/pdf${this.buildParams({ search, status })}`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  exportAttendanceExcel(empId?: number, month?: number, year?: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/attendance/excel${this.buildParams({ empId, month, year })}`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  exportAttendancePdf(empId?: number, month?: number, year?: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/attendance/pdf${this.buildParams({ empId, month, year })}`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  exportLeavesExcel(status?: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/leaves/excel${this.buildParams({ status })}`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  exportLeavesPdf(status?: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/leaves/pdf${this.buildParams({ status })}`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  exportProjectsExcel(status?: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/projects/excel${this.buildParams({ status })}`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  exportProjectsPdf(status?: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/projects/pdf${this.buildParams({ status })}`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  exportClientsExcel(): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/clients/excel`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  exportDashboardPdf(): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/Reports/dashboard/pdf`, {
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
 }

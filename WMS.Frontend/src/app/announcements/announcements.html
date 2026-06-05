@@ -1,65 +1,94 @@
-<div class="container mt-4" style="padding: 20px; font-family: Roboto, sans-serif;">
-  <h2 style="color: #3f51b5; margin-bottom: 20px;">System Notice Board</h2>
-  
-  <div *ngIf="authService.isAdmin()" class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    <div class="card-header text-white" style="background-color: #e91e63; padding: 15px; font-weight: bold; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-      {{ isEditMode ? 'Edit Broadcast Notice' : 'Broadcast New Notice' }}
+<div>
+  <!-- Page Header -->
+  <div class="page-header animate-slideUp">
+    <div class="page-header-left">
+      <h1>Notice Board</h1>
+      <p>Broadcast company-wide announcements and notices</p>
     </div>
-    <div class="card-body" style="padding: 20px;">
-      <form [formGroup]="alertForm" (ngSubmit)="onSubmit()">
-        <div style="margin-bottom: 15px;">
-          <label style="font-weight: bold; display: block; margin-bottom: 5px;">Notice Title</label>
-          <input type="text" class="form-control" formControlName="title" placeholder="e.g., Server Maintenance" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-        </div>
+    <div class="page-header-actions" *ngIf="authService.isAdmin()">
+      <button class="btn btn-primary" (click)="isEditMode ? cancelEdit() : null">
+        {{ isEditMode ? 'Cancel' : '+ New Notice' }}
+      </button>
+    </div>
+  </div>
 
-        <div style="margin-bottom: 15px;">
-          <label style="font-weight: bold; display: block; margin-bottom: 5px;">Message Details</label>
-          <textarea class="form-control" formControlName="message" rows="3" placeholder="Provide full details here..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"></textarea>
-        </div>
+  <!-- Server Error -->
+  <div *ngIf="serverError" class="alert alert-danger animate-slideUp" role="alert">
+    <span>⚠️</span> {{ serverError }}
+  </div>
 
-        <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-          <input type="checkbox" formControlName="isActive" id="activeCheck" style="transform: scale(1.2);">
-          <label for="activeCheck" style="font-weight: bold; margin: 0; color: #555;">Mark as Active (Visible to Employees)</label>
+  <!-- Form Card -->
+  <div *ngIf="authService.isAdmin()" class="card animate-slideUp announce-form-card">
+    <div class="card-header">
+      <div class="card-header-title">{{ isEditMode ? '✏️ Edit Notice' : '📢 Broadcast New Notice' }}</div>
+    </div>
+    <div class="card-body">
+      <form [formGroup]="alertForm" (ngSubmit)="onSubmit()" aria-label="Announcement form">
+        <div class="form-group">
+          <label class="form-label">Notice Title *</label>
+          <input type="text" class="form-input" formControlName="title" placeholder="e.g. Server Maintenance Scheduled">
+          <div *ngIf="f['title'].touched && f['title'].invalid" class="form-error">
+            <span *ngIf="f['title'].errors?.['required']">Title is required.</span>
+            <span *ngIf="f['title'].errors?.['minlength']">Min 5 characters required.</span>
+            <span *ngIf="f['title'].errors?.['maxlength']">Max 200 characters allowed.</span>
+          </div>
         </div>
-
-        <div style="display: flex; gap: 10px;">
-          <button type="submit" style="background-color: #4caf50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-            {{ isEditMode ? 'Update Announcement' : 'Post Announcement' }}
+        <div class="form-group">
+          <label class="form-label">Message *</label>
+          <textarea class="form-textarea" formControlName="message" rows="4" placeholder="Provide full details of the announcement..."></textarea>
+          <div *ngIf="f['message'].touched && f['message'].invalid" class="form-error">
+            <span *ngIf="f['message'].errors?.['required']">Message is required.</span>
+            <span *ngIf="f['message'].errors?.['minlength']">Min 10 characters required.</span>
+            <span *ngIf="f['message'].errors?.['maxlength']">Max 2000 characters allowed.</span>
+          </div>
+        </div>
+        <div class="announce-checkbox-row">
+          <input type="checkbox" formControlName="isActive" id="activeCheck" class="announce-checkbox">
+          <label for="activeCheck" class="announce-checkbox-label">Mark as Active (Visible to Employees)</label>
+        </div>
+        <div class="announce-form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="alertForm.invalid">
+            {{ isEditMode ? 'Update Notice' : 'Post Notice' }}
           </button>
-
-          <button *ngIf="isEditMode" type="button" (click)="cancelEdit()" style="background-color: #757575; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-            Cancel
-          </button>
+          <button *ngIf="isEditMode" type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 
-  <h4 style="color: #555; margin-bottom: 15px;">Recent Broadcasts</h4>
-  
-  <div *ngIf="alerts.length === 0" style="padding: 20px; background: #fff; border-radius: 8px; text-align: center; color: #888;">
-    No announcements have been posted yet.
-  </div>
-
-  <div style="display: flex; flex-direction: column; gap: 15px;">
-    <div *ngFor="let alert of alerts" class="card" style="border-left: 5px solid #e91e63; padding: 20px; background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 4px;">
-      
-      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div>
-          <h5 style="margin: 0 0 8px 0; color: #333; font-size: 18px;">{{ alert.title }}</h5>
-          <p style="margin: 0 0 12px 0; color: #555; line-height: 1.5;">{{ alert.message }}</p>
-          <small style="color: #888; font-weight: 500;">
-            Posted: {{ alert.createdOn | date:'medium' }} | Status: 
-            <span [style.color]="alert.isActive ? '#4caf50' : '#e91e63'">{{ alert.isActive ? 'Active' : 'Inactive' }}</span>
-          </small>
-        </div>
-        
-        <div *ngIf="authService.isAdmin()" style="display: flex; gap: 8px;">
-          <button (click)="editAlert(alert)" style="background: #ffb300; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Edit</button>
-          <button (click)="deleteAlert(alert.announcementId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Delete</button>
+  <!-- Announcements List -->
+  <div class="card animate-slideUp">
+    <div class="card-header">
+      <div class="card-header-title">Recent Broadcasts</div>
+      <span class="badge badge-neutral">{{ alerts.length }} notices</span>
+    </div>
+    <div class="card-body announce-list-body">
+      <div *ngIf="alerts.length === 0" class="empty-state">
+        <div class="empty-state-icon">📢</div>
+        <div class="empty-state-title">No announcements yet</div>
+        <div class="empty-state-text">Post your first announcement to get started</div>
+      </div>
+      <div *ngFor="let alert of alerts; trackBy: trackByAnnouncementId" class="announce-item">
+        <div class="announce-item-inner">
+          <div class="announce-item-header">
+            <div class="announce-item-content">
+              <div class="announce-item-title-row">
+                <span class="announce-item-icon">📢</span>
+                <h3 class="announce-item-title">{{ alert.title }}</h3>
+                <span class="badge" [ngClass]="alert.isActive ? 'badge-success' : 'badge-neutral'">
+                  <span class="badge-dot"></span>{{ alert.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+              <p class="announce-item-message">{{ alert.message }}</p>
+              <small class="announce-item-date">Posted: {{ alert.createdOn | date:'medium' }}</small>
+            </div>
+            <div *ngIf="authService.isAdmin()" class="announce-item-actions">
+              <button class="btn btn-sm btn-warning" (click)="editAlert(alert)">✏️ Edit</button>
+              <button class="btn btn-sm btn-danger" (click)="deleteAlert(alert.announcementId)">🗑️ Delete</button>
+            </div>
+          </div>
         </div>
       </div>
-      
     </div>
   </div>
 </div>

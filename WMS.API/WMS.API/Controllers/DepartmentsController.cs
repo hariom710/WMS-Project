@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WMS.API.Data;
+using WMS.API.Helpers;
+using WMS.Application.DTOs;
+using WMS.Domain.Interfaces;
 using WMS.Domain.Models;
+using AutoMapper;
 
 namespace WMS.API.Controllers
 {
@@ -11,75 +13,75 @@ namespace WMS.API.Controllers
     [Authorize]
     public class DepartmentsController : ControllerBase
     {
-        private readonly WMSDbContext _context;
+        private readonly IDepartmentService _departmentService;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IMapper _mapper;
 
-        public DepartmentsController(WMSDbContext context)
+        public DepartmentsController(IDepartmentService departmentService, ICurrentUserService currentUser, IMapper mapper)
         {
-            _context = context;
+            _departmentService = departmentService;
+            _currentUser = currentUser;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Department>>> GetDepartments(
-            [FromQuery] string? search)
+        public async Task<IActionResult> GetDepartments(
+            [FromQuery] string? search, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            var query = _context.Departments.AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.ToLower();
-                query = query.Where(d => d.DepartmentName.ToLower().Contains(term));
-            }
-
-            return await query.OrderBy(d => d.DepartmentName).ToListAsync();
+            var result = await _departmentService.GetAllAsync(search, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<DepartmentDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<DepartmentDto>>.Ok(dtos, pagination));
         }
 
+        [HttpGet("deleted")]
         [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetDeletedDepartments(
+            [FromQuery] string? search, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            var result = await _departmentService.GetDeletedAsync(search, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<DepartmentDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<DepartmentDto>>.Ok(dtos, pagination));
+        }
+
         [HttpPost]
-        public async Task<ActionResult<Department>> PostDepartment(Department department)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostDepartment([FromBody] CreateDepartmentDto dto)
         {
-            department.CreatedOn = DateTime.Now;
-            _context.Departments.Add(department);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetDepartments), new { id = department.DepartmentId }, department);
+            var department = _mapper.Map<Department>(dto);
+            await _departmentService.CreateAsync(department, _currentUser.Username);
+            return CreatedAtAction(nameof(GetDepartments), new { id = department.DepartmentId }, ApiResponse<DepartmentDto>.Ok(_mapper.Map<DepartmentDto>(department)));
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutDepartment(int id, Department department)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutDepartment(int id, [FromBody] UpdateDepartmentDto dto)
         {
-            if (id != department.DepartmentId)
-            {
-                return BadRequest(new { message = "ID mismatch." });
-            }
-
-            _context.Entry(department).State = EntityState.Modified;
-            _context.Entry(department).Property(x => x.CreatedOn).IsModified = false;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Department updated successfully!" });
+            var department = _mapper.Map<Department>(dto);
+            department.DepartmentId = id;
+            await _departmentService.UpdateAsync(id, department, _currentUser.Username);
+            return Ok(ApiResponse<object>.Ok(null!, "Department updated successfully!"));
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteDepartment(int id)
         {
-            var department = await _context.Departments.FindAsync(id);
-            if (department == null)
-            {
-                return NotFound();
-            }
+            var (success, message) = await _departmentService.SoftDeleteAsync(id, _currentUser.Username);
+            if (!success) return BadRequest(ApiResponse<object>.Fail(message));
+            return Ok(ApiResponse<object>.Ok(null!, message));
+        }
 
-            var hasEmployees = await _context.Employees.AnyAsync(e => e.DepartmentId == id);
-            if (hasEmployees)
-            {
-                return BadRequest(new { message = "Cannot delete this department because employees are currently assigned to it." });
-            }
-
-            _context.Departments.Remove(department);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Department deleted successfully!" });
+        [HttpPost("restore/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RestoreDepartment(int id)
+        {
+            var success = await _departmentService.RestoreAsync(id);
+            if (!success) return NotFound(ApiResponse<object>.Fail("Deleted department not found."));
+            return Ok(ApiResponse<object>.Ok(null!, "Department restored successfully!"));
         }
     }
 }

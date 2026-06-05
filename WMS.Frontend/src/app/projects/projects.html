@@ -1,88 +1,109 @@
-<div class="container mt-4" style="padding: 20px;">
-  <h2 style="color: #3f51b5; margin-bottom: 20px;">Project Management</h2>
-  
-  <div *ngIf="authService.isAdmin()" class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    <div class="card-header text-white" style="background-color: #3f51b5; padding: 15px; font-weight: bold; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-      {{ editProject ? 'Edit Project' : 'Create New Project' }}
+<div>
+  <!-- Page Header -->
+  <div class="page-header animate-slideUp">
+    <div class="page-header-left">
+      <h1>Project Management</h1>
+      <p>Track and manage your project portfolio</p>
     </div>
-    <div class="card-body" style="padding: 20px;">
-      <form [formGroup]="projectForm" (ngSubmit)="onSubmit()">
-        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-          
-          <div style="flex: 2;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Project Name</label>
-            <input type="text" class="form-control" formControlName="projectName" placeholder="e.g., Cloud Migration" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-          </div>
+    <div class="page-header-actions" *ngIf="authService.isAdmin()">
+      <button class="btn btn-sm btn-outline" (click)="exportExcel()" [disabled]="exportingExcel">
+        {{ exportingExcel ? '⏳' : '📊' }} Excel
+      </button>
+      <button class="btn btn-sm btn-outline" (click)="exportPdf()" [disabled]="exportingPdf">
+        {{ exportingPdf ? '⏳' : '📄' }} PDF
+      </button>
+      <button class="btn btn-primary" (click)="editProject ? cancelEdit() : null">
+        {{ editProject ? 'Cancel' : '+ New Project' }}
+      </button>
+    </div>
+  </div>
 
-          <div style="flex: 1;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Start Date</label>
-            <input type="date" class="form-control" formControlName="startDate" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-          </div>
+  <!-- Server Error -->
+  <div *ngIf="serverError" class="alert alert-danger animate-slideUp" role="alert">
+    <span>⚠️</span> {{ serverError }}
+  </div>
 
-          <div style="flex: 1;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">End Date</label>
-            <input type="date" class="form-control" formControlName="endDate" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+  <!-- Form Card -->
+  <div *ngIf="authService.isAdmin()" class="card animate-slideUp proj-form-card">
+    <div class="card-header">
+      <div class="card-header-title">{{ editProject ? '✏️ Edit Project' : '➕ Create New Project' }}</div>
+    </div>
+    <div class="card-body">
+      <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" aria-label="Project form">
+        <div class="form-row">
+          <div class="form-group proj-name-field">
+            <label class="form-label">Project Name *</label>
+            <input type="text" class="form-input" formControlName="projectName" placeholder="e.g. Cloud Migration">
+            <div *ngIf="f['projectName'].touched && f['projectName'].invalid" class="form-error">
+              <span *ngIf="f['projectName'].errors?.['required']">Project name is required.</span>
+              <span *ngIf="f['projectName'].errors?.['minlength']">Min 3 characters required.</span>
+            </div>
           </div>
-
-          <div style="flex: 1;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Status</label>
-            <select class="form-control" formControlName="status" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-              <option value="Active">Active</option>
-              <option value="Completed">Completed</option>
+          <div class="form-group">
+            <label class="form-label">Start Date *</label>
+            <input type="date" class="form-input" formControlName="startDate">
+            <div *ngIf="f['startDate'].touched && f['startDate'].invalid" class="form-error">Start date is required.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date *</label>
+            <input type="date" class="form-input" formControlName="endDate">
+            <div *ngIf="f['endDate'].touched && f['endDate'].invalid" class="form-error">End date is required.</div>
+            <div *ngIf="projectForm.errors?.['projectDateRange'] && f['endDate'].touched" class="form-error">End date cannot be before start date.</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Status *</label>
+            <select class="form-select" formControlName="status">
+              <option value="Active">🟢 Active</option>
+              <option value="Completed">✅ Completed</option>
             </select>
           </div>
-          
         </div>
-
-        <div style="display: flex; gap: 10px;">
-          <button type="submit" [disabled]="projectForm.invalid" style="background-color: #4caf50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+        <div class="proj-form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="projectForm.invalid">
             {{ editProject ? 'Update Project' : 'Create Project' }}
           </button>
-          <button *ngIf="editProject" type="button" (click)="cancelEdit()" style="background-color: #e91e63; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-            Cancel
-          </button>
+          <button *ngIf="editProject" type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div class="card" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    <div class="card-header" style="background-color: #f5f5f5; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">
-      Project Portfolio
+  <!-- Projects Grid -->
+  <div class="card animate-slideUp">
+    <div class="card-header">
+      <div class="card-header-title">Project Portfolio</div>
+      <span class="badge badge-neutral">{{ projects.length }} projects</span>
     </div>
-    <div class="card-body" style="padding: 0;">
-      <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr style="background-color: #f9f9f9; text-align: left;">
-            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Project Name</th>
-            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Start Date</th>
-            <th style="padding: 15px; border-bottom: 2px solid #ddd;">End Date</th>
-            <th style="padding: 15px; border-bottom: 2px solid #ddd;">Status</th>
-            <th *ngIf="authService.isAdmin()" style="padding: 15px; border-bottom: 2px solid #ddd;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngIf="projects.length === 0">
-            <td [attr.colspan]="authService.isAdmin() ? 5 : 4" style="padding: 20px; text-align: center; color: #888; font-style: italic;">
-              No projects have been posted yet.
-            </td>
-          </tr>
-
-          <tr *ngFor="let p of projects" style="border-bottom: 1px solid #eee;">
-            <td style="padding: 15px; font-weight: bold; color: #333;">{{ p.projectName }}</td>
-            <td style="padding: 15px; color: #555;">{{ p.startDate | date:'mediumDate' }}</td>
-            <td style="padding: 15px; color: #555;">{{ p.endDate | date:'mediumDate' }}</td>
-            <td style="padding: 15px; font-weight: bold;" 
-                [ngStyle]="{'color': p.status === 'Active' ? '#2196f3' : '#4caf50'}">
-              {{ p.status }}
-            </td>
-            <td *ngIf="authService.isAdmin()" style="padding: 15px;">
-              <button (click)="onEdit(p)" style="background: #ffb300; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px;">Edit</button>
-              <button (click)="onDelete(p.projectId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Delete</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="card-body proj-grid-body">
+      <div *ngIf="projects.length === 0" class="empty-state">
+        <div class="empty-state-icon">📁</div>
+        <div class="empty-state-title">No projects yet</div>
+        <div class="empty-state-text">Create your first project to get started</div>
+      </div>
+      <div class="proj-grid" *ngIf="projects.length > 0">
+        <div *ngFor="let p of projects; trackBy: trackByProjectId" class="proj-card">
+          <div class="proj-card-header">
+            <div>
+              <h3 class="proj-card-name">{{ p.projectName }}</h3>
+              <span class="badge" [ngClass]="p.status === 'Active' ? 'badge-primary' : 'badge-success'">
+                <span class="badge-dot"></span>{{ p.status }}
+              </span>
+            </div>
+            <div *ngIf="authService.isAdmin()" class="proj-card-actions">
+              <button class="btn btn-sm btn-ghost" (click)="onEdit(p)">✏️</button>
+              <button class="btn btn-sm btn-ghost proj-card-delete" (click)="onDelete(p.projectId)">🗑️</button>
+            </div>
+          </div>
+          <div class="proj-card-footer">
+            <div>
+              <span>📅</span>
+              {{ p.startDate | date:'mediumDate' }} — {{ p.endDate | date:'mediumDate' }}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WMS.API.Data;
+using WMS.API.Helpers;
+using WMS.Domain.Interfaces;
 using WMS.Domain.Models;
 
 namespace WMS.API.Controllers
@@ -11,18 +11,33 @@ namespace WMS.API.Controllers
     [Authorize(Roles = "Admin")]
     public class AuditLogsController : ControllerBase
     {
-        private readonly WMSDbContext _context;
+        private readonly IActivityLogService _activityLogService;
 
-        public AuditLogsController(WMSDbContext context)
+        public AuditLogsController(IActivityLogService activityLogService)
         {
-            _context = context;
+            _activityLogService = activityLogService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<AuditLog>>> GetAuditLogs()
+        public async Task<IActionResult> GetLogs(
+            [FromQuery] string? entityName,
+            [FromQuery] string? action,
+            [FromQuery] string? username,
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
-            // Fetch logs ordered by most recent first
-            return await _context.AuditLogs.OrderByDescending(a => a.CreatedOn).ToListAsync();
+            var result = await _activityLogService.GetLogsAsync(entityName, action, username, from, to, sortBy, sortDirection, page, pageSize);
+            var pagination = new PaginationInfo
+            {
+                Page = result.Page,
+                PageSize = result.PageSize,
+                TotalCount = result.TotalCount
+            };
+            return Ok(ApiResponse<List<AuditLog>>.Ok(result.Items.ToList(), pagination));
         }
     }
 }

@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WMS.API.Data;
+using WMS.API.Helpers;
+using WMS.Application.DTOs;
+using WMS.Domain.Interfaces;
 using WMS.Domain.Models;
+using AutoMapper;
 
 namespace WMS.API.Controllers
 {
@@ -11,68 +13,76 @@ namespace WMS.API.Controllers
     [Authorize]
     public class ProjectsController : ControllerBase
     {
-        private readonly WMSDbContext _context;
+        private readonly IProjectService _projectService;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IMapper _mapper;
 
-        public ProjectsController(WMSDbContext context)
+        public ProjectsController(IProjectService projectService, ICurrentUserService currentUser, IMapper mapper)
         {
-            _context = context;
+            _projectService = projectService;
+            _currentUser = currentUser;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
+        public async Task<IActionResult> GetProjects(
+            [FromQuery] string? search, [FromQuery] string? status,
+            [FromQuery] int? clientId, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            return await _context.Projects
-                .Include(p => p.Client)
-                .OrderByDescending(p => p.ProjectId)
-                .ToListAsync();
+            var result = await _projectService.GetAllAsync(search, status, clientId, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<ProjectDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<ProjectDto>>.Ok(dtos, pagination));
         }
 
+        [HttpGet("deleted")]
         [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetDeletedProjects(
+            [FromQuery] string? search, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            var result = await _projectService.GetDeletedAsync(search, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<ProjectDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<ProjectDto>>.Ok(dtos, pagination));
+        }
+
         [HttpPost]
-        public async Task<ActionResult<Project>> PostProject(Project project)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostProject([FromBody] CreateProjectDto dto)
         {
-            if (project.ClientId == 0)
-            {
-                project.ClientId = null;
-            }
-
-            _context.Projects.Add(project);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetProjects), new { id = project.ProjectId }, project);
+            var project = _mapper.Map<Project>(dto);
+            await _projectService.CreateAsync(project, _currentUser.Username);
+            return CreatedAtAction(nameof(GetProjects), new { id = project.ProjectId }, ApiResponse<ProjectDto>.Ok(_mapper.Map<ProjectDto>(project)));
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutProject(int id, Project project)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutProject(int id, [FromBody] UpdateProjectDto dto)
         {
-            if (id != project.ProjectId) return BadRequest();
-
-            if (project.ClientId == 0) project.ClientId = null;
-
-            _context.Entry(project).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Project updated successfully!" });
+            var project = _mapper.Map<Project>(dto);
+            project.ProjectId = id;
+            await _projectService.UpdateAsync(id, project, _currentUser.Username);
+            return Ok(ApiResponse<object>.Ok(null!, "Project updated successfully!"));
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteProject(int id)
         {
-            var project = await _context.Projects.FindAsync(id);
-            if (project == null) return NotFound();
+            var (success, message) = await _projectService.SoftDeleteAsync(id, _currentUser.Username);
+            if (!success) return BadRequest(ApiResponse<object>.Fail(message));
+            return Ok(ApiResponse<object>.Ok(null!, message));
+        }
 
-            var hasAllocations = await _context.ProjectAllocations.AnyAsync(a => a.ProjectId == id);
-            if (hasAllocations)
-            {
-                return BadRequest(new { message = "Cannot delete project with active allocations." });
-            }
-
-            _context.Projects.Remove(project);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Project deleted successfully!" });
+        [HttpPost("restore/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RestoreProject(int id)
+        {
+            var success = await _projectService.RestoreAsync(id);
+            if (!success) return NotFound(ApiResponse<object>.Fail("Deleted project not found."));
+            return Ok(ApiResponse<object>.Ok(null!, "Project restored successfully!"));
         }
     }
 }

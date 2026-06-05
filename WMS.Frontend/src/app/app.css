@@ -1,0 +1,66 @@
+/* ============================================================
+   APP SHELL ENHANCEMENTS
+   ============================================================ */
+
+.sidebar-logout {
+  color: #F87171 !important;
+}
+
+.sidebar-logout:hover {
+  color: #FCA5A5 !important;
+}
+
+.topbar-role-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
+.sidebar-section-gap {
+  margin-top: var(--space-4);
+}
+
+/* ============================================================
+   MAIN CONTENT AREA
+   ============================================================ */
+
+.app-content {
+  min-height: calc(100vh - 64px);
+}
+
+/* ============================================================
+   SIDEBAR ACTIVE INDICATOR FIX
+   ============================================================ */
+
+.sidebar-item {
+  position: relative;
+}
+
+/* ============================================================
+   TOPBAR ENHANCEMENTS
+   ============================================================ */
+
+.topbar-left {
+  min-width: 0;
+}
+
+.topbar-page-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 768px) {
+  .topbar-user-info {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .sidebar-overlay {
+    transition: opacity var(--transition-base);
+  }
+}

@@ -1,30 +1,87 @@
-<nav *ngIf="authService.isLoggedIn | async" style="background-color: #3f51b5; padding: 15px 30px; color: white; font-family: Roboto, sans-serif; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 3px 5px rgba(0,0,0,0.2);">
-  
-  <div style="display: flex; gap: 20px; align-items: center;">
-    <h3 style="margin: 0; padding-right: 20px; border-right: 1px solid rgba(255,255,255,0.5);">
-      {{ isAdmin ? 'WMS Admin' : 'WMS Portal' }}
-    </h3>
-    <a routerLink="/dashboard" style="color: white; text-decoration: none; font-weight: 500;">Dashboard</a>
-    <a routerLink="/departments" style="color: white; text-decoration: none; font-weight: 500;">Departments</a>
-    <a routerLink="/employees" style="color: white; text-decoration: none; font-weight: 500;">Employees</a>
-    <a routerLink="/attendance" style="color: white; text-decoration: none; font-weight: 500;">Attendance</a>
-    <a routerLink="/leaves" style="color: white; text-decoration: none; font-weight: 500;">Leaves</a>
-    <a routerLink="/projects" style="color: white; text-decoration: none; font-weight: 500;">Projects</a>
-    <a routerLink="/allocations" style="color: white; text-decoration: none; font-weight: 500;">Allocations</a>
-    <a routerLink="/clients" style="color: white; text-decoration: none; font-weight: 500;">Clients</a>
-    <a routerLink="/announcements" style="color: white; text-decoration: none; font-weight: 500;">Notices</a>
-  </div>
+<div *ngIf="authService.isLoggedIn | async" class="app-layout">
 
-  <div style="display: flex; gap: 15px; align-items: center;">
-    <a routerLink="/change-password" style="color: #e3f2fd; text-decoration: none; font-size: 14px; font-weight: bold;">
-      Change Password
-    </a>
-    <button (click)="onLogout()" style="background-color: #e91e63; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background-color 0.3s;">
-      Logout
-    </button>
-  </div>
-</nav>
+  <!-- Skip Navigation -->
+  <a href="#main-content" class="skip-nav">Skip to main content</a>
 
-<main style="background-color: #f4f6f9; min-height: 100vh;">
-  <router-outlet></router-outlet>
-</main>
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" [class.show]="sidebarOpen" (click)="closeSidebar()" role="presentation"></div>
+
+  <!-- Sidebar -->
+  <aside class="app-sidebar" [class.open]="sidebarOpen" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon" aria-hidden="true">W</div>
+      <div class="sidebar-logo-text">
+        WMS
+        <span>Workforce Management</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <ng-container *ngFor="let item of navItems; trackBy: trackByNavPath">
+        <div class="sidebar-section-title" *ngIf="item.section && (navItems.indexOf(item) === 0 || navItems[navItems.indexOf(item) - 1].section !== item.section)" [attr.aria-label]="item.section + ' section'">
+          {{ item.section }}
+        </div>
+        <a [routerLink]="item.path" routerLinkActive="active" class="sidebar-item" [attr.aria-label]="item.label">
+          <span class="sidebar-item-icon" aria-hidden="true">{{ item.icon }}</span>
+          {{ item.label }}
+        </a>
+      </ng-container>
+
+      <div class="sidebar-section-title sidebar-section-gap" aria-label="Account section">Account</div>
+      <a routerLink="/change-password" routerLinkActive="active" class="sidebar-item" aria-label="Change Password">
+        <span class="sidebar-item-icon" aria-hidden="true">🔒</span>
+        Change Password
+      </a>
+      <a (click)="onLogout()" class="sidebar-item sidebar-logout" role="button" aria-label="Logout" tabindex="0" (keydown.enter)="onLogout()">
+        <span class="sidebar-item-icon" aria-hidden="true">🚪</span>
+        Logout
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user" [attr.aria-label]="'Logged in as ' + username">
+        <div class="sidebar-user-avatar" aria-hidden="true">{{ getInitials() }}</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">{{ username }}</div>
+          <div class="sidebar-user-role">{{ userRole }}</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="app-main">
+    <!-- Top Bar -->
+    <header class="app-topbar" role="banner">
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" (click)="toggleSidebar()" [attr.aria-label]="sidebarOpen ? 'Close menu' : 'Open menu'" [attr.aria-expanded]="sidebarOpen">☰</button>
+        <div>
+          <div class="topbar-page-title">{{ currentPageTitle }}</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-search">
+          <span class="topbar-search-icon" aria-hidden="true">🔍</span>
+          <input type="text" placeholder="Search anything..." aria-label="Search">
+        </div>
+        <div class="topbar-user" role="complementary">
+          <div class="topbar-avatar" aria-hidden="true">{{ getInitials() }}</div>
+          <div class="topbar-user-info">
+            <div class="topbar-user-name">{{ username }}</div>
+            <div class="topbar-user-role">
+              <span class="badge badge-primary topbar-role-badge">{{ userRole }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main id="main-content" class="app-content animate-fadeIn" role="main">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
+<!-- Login Route (No Sidebar) -->
+<router-outlet *ngIf="!(authService.isLoggedIn | async)"></router-outlet>

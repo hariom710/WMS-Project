@@ -1,80 +1,104 @@
-<div class="container mt-4" style="padding: 20px;">
-  <h2 style="color: #3f51b5; margin-bottom: 20px;">Client Management</h2>
-  
-  <div *ngIf="authService.isAdmin()" class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    <div class="card-header text-white" style="background-color: #3f51b5; padding: 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
-      {{ isEditMode ? 'Edit Client' : 'Register New Client' }}
+<div>
+  <!-- Page Header -->
+  <div class="page-header animate-slideUp">
+    <div class="page-header-left">
+      <h1>Client Management</h1>
+      <p>Manage your business clients and contacts</p>
     </div>
-    <div class="card-body" style="padding: 20px;">
-      <form [formGroup]="clientForm" (ngSubmit)="onSubmit()">
-        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-          
-          <div style="flex: 2;">
-            <label style="font-weight: bold;">Client Name</label>
-            <input type="text" class="form-control" formControlName="clientName" style="width: 100%; padding: 8px;">
+    <div class="page-header-actions" *ngIf="authService.isAdmin()">
+      <button class="btn btn-sm btn-outline" (click)="exportExcel()" [disabled]="exportingExcel">
+        {{ exportingExcel ? '⏳' : '📊' }} Excel
+      </button>
+      <button class="btn btn-primary" (click)="isEditMode ? cancelEdit() : null">
+        {{ isEditMode ? 'Cancel' : '+ New Client' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Server Error -->
+  <div *ngIf="serverError" class="alert alert-danger animate-slideUp" role="alert">
+    <span>⚠️</span> {{ serverError }}
+  </div>
+
+  <!-- Form Card -->
+  <div *ngIf="authService.isAdmin()" class="card animate-slideUp cli-form-card">
+    <div class="card-header">
+      <div class="card-header-title">{{ isEditMode ? '✏️ Edit Client' : '➕ Register New Client' }}</div>
+    </div>
+    <div class="card-body">
+      <form [formGroup]="clientForm" (ngSubmit)="onSubmit()" aria-label="Client form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Client Name *</label>
+            <input type="text" class="form-input" formControlName="clientName" placeholder="e.g. Acme Corporation">
+            <div *ngIf="f['clientName'].touched && f['clientName'].invalid" class="form-error">
+              <span *ngIf="f['clientName'].errors?.['required']">Client name is required.</span>
+              <span *ngIf="f['clientName'].errors?.['minlength']">Min 3 characters required.</span>
+            </div>
           </div>
-          <div style="flex: 1;">
-            <label style="font-weight: bold;">Phone Number</label>
-            <input type="text" class="form-control" formControlName="clientPhoneNumber" style="width: 100%; padding: 8px;">
+          <div class="form-group">
+            <label class="form-label">Phone Number *</label>
+            <input type="text" class="form-input" formControlName="clientPhoneNumber" placeholder="1234567890">
+            <div *ngIf="f['clientPhoneNumber'].touched && f['clientPhoneNumber'].invalid" class="form-error">
+              <span *ngIf="f['clientPhoneNumber'].errors?.['required']">Phone is required.</span>
+              <span *ngIf="f['clientPhoneNumber'].errors?.['pattern']">Must be exactly 10 digits.</span>
+            </div>
           </div>
-          <div style="flex: 1;">
-            <label style="font-weight: bold;">Location</label>
-            <input type="text" class="form-control" formControlName="clientLocation" style="width: 100%; padding: 8px;">
+          <div class="form-group">
+            <label class="form-label">Location *</label>
+            <input type="text" class="form-input" formControlName="clientLocation" placeholder="e.g. Mumbai, India">
+            <div *ngIf="f['clientLocation'].touched && f['clientLocation'].invalid" class="form-error">Location is required.</div>
           </div>
         </div>
-
-        <div style="margin-bottom: 15px;">
-          <label style="font-weight: bold;">Full Address</label>
-          <input type="text" class="form-control" formControlName="clientAddress" style="width: 100%; padding: 8px;">
+        <div class="form-group">
+          <label class="form-label">Full Address *</label>
+          <input type="text" class="form-input" formControlName="clientAddress" placeholder="Enter full address">
+          <div *ngIf="f['clientAddress'].touched && f['clientAddress'].invalid" class="form-error">Address is required.</div>
         </div>
-
-        <div style="display: flex; gap: 10px;">
-          <button type="submit" [disabled]="clientForm.invalid" style="background-color: #4caf50; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+        <div class="cli-form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="clientForm.invalid">
             {{ isEditMode ? 'Update Client' : 'Save Client' }}
           </button>
-          <button *ngIf="isEditMode" type="button" (click)="cancelEdit()" style="background-color: #e91e63; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">
-            Cancel
-          </button>
+          <button *ngIf="isEditMode" type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 
-  <table mat-table [dataSource]="clients" class="mat-elevation-z8" style="width: 100%;">
-    
-    <ng-container matColumnDef="name">
-      <th mat-header-cell *matHeaderCellDef> Client Name </th>
-      <td mat-cell *matCellDef="let element"> <strong>{{element.clientName}}</strong> </td>
-    </ng-container>
-
-    <ng-container matColumnDef="phone">
-      <th mat-header-cell *matHeaderCellDef> Phone </th>
-      <td mat-cell *matCellDef="let element"> {{element.clientPhoneNumber || 'N/A'}} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="location">
-      <th mat-header-cell *matHeaderCellDef> Location </th>
-      <td mat-cell *matCellDef="let element"> {{element.clientLocation || 'N/A'}} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="status">
-      <th mat-header-cell *matHeaderCellDef> Status </th>
-      <td mat-cell *matCellDef="let element"> 
-        <span [ngStyle]="{'color': element.status ? '#4caf50' : '#e53935', 'font-weight': 'bold'}">
-          {{element.status ? 'Active' : 'Inactive'}}
-        </span>
-      </td>
-    </ng-container>
-
-    <ng-container matColumnDef="actions">
-      <th mat-header-cell *matHeaderCellDef style="text-align: right;"> Actions </th>
-      <td mat-cell *matCellDef="let element" style="text-align: right; padding-right: 15px;">
-        <button (click)="editClient(element)" style="background: #ffb300; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; margin-right: 8px; cursor: pointer;">Edit</button>
-        <button (click)="deleteClient(element.clientId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Delete</button>
-      </td>
-    </ng-container>
-
-    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-  </table>
+  <!-- Clients Grid -->
+  <div class="card animate-slideUp">
+    <div class="card-header">
+      <div class="card-header-title">All Clients</div>
+      <span class="badge badge-neutral">{{ clients.length }} clients</span>
+    </div>
+    <div class="card-body cli-grid-body">
+      <div *ngIf="clients.length === 0" class="empty-state">
+        <div class="empty-state-icon">🤝</div>
+        <div class="empty-state-title">No clients yet</div>
+        <div class="empty-state-text">Add your first client to get started</div>
+      </div>
+      <div class="cli-grid" *ngIf="clients.length > 0">
+        <div *ngFor="let c of clients; trackBy: trackByClientId" class="cli-card">
+          <div class="cli-card-header">
+            <div class="avatar avatar-secondary">{{ c.clientName?.charAt(0) }}</div>
+            <div>
+              <h3 class="cli-card-name">{{ c.clientName }}</h3>
+              <span class="badge" [ngClass]="c.status ? 'badge-success' : 'badge-neutral'">
+                <span class="badge-dot"></span>{{ c.status ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+          <div class="cli-card-info">
+            <div class="cli-card-info-item"><span>📞</span>{{ c.clientPhoneNumber || 'N/A' }}</div>
+            <div class="cli-card-info-item"><span>📍</span>{{ c.clientLocation || 'N/A' }}</div>
+            <div class="cli-card-address cli-card-info-item"><span>🏠</span>{{ c.clientAddress || 'N/A' }}</div>
+          </div>
+          <div *ngIf="authService.isAdmin()" class="cli-card-actions">
+            <button class="btn btn-sm btn-warning cli-card-action-btn" (click)="editClient(c)">✏️ Edit</button>
+            <button class="btn btn-sm btn-danger cli-card-action-btn" (click)="deleteClient(c.clientId)">🗑️ Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

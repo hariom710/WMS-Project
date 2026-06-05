@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WMS.API.Data;
-using WMS.Domain.Models;
+using WMS.Domain.Interfaces;
 
 namespace WMS.API.Controllers
 {
@@ -11,31 +9,24 @@ namespace WMS.API.Controllers
     [Authorize(Roles = "Admin")]
     public class UserLoginsController : ControllerBase
     {
-        private readonly WMSDbContext _context;
+        private readonly IUserLoginService _userLoginService;
 
-        public UserLoginsController(WMSDbContext context)
+        public UserLoginsController(IUserLoginService userLoginService)
         {
-            _context = context;
+            _userLoginService = userLoginService;
         }
 
-        // GET: api/UserLogins
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserLogin>>> GetUserLogins()
+        public async Task<IActionResult> GetUserLogins()
         {
-            // FIXED: Now we include the Role, which matches your model!
-            return await _context.UserLogins
-                .Include(u => u.Role)
-                .ToListAsync();
+            var logins = await _userLoginService.GetAllAsync();
+            return Ok(logins);
         }
 
-        // POST: api/UserLogins
         [HttpPost]
-        public async Task<ActionResult<UserLogin>> PostUserLogin(UserLogin userLogin)
+        public async Task<IActionResult> PostUserLogin([FromBody] Domain.Models.UserLogin userLogin)
         {
-            _context.UserLogins.Add(userLogin);
-            await _context.SaveChangesAsync();
-
-            // FIXED: Now we use UserId, which matches your model!
+            await _userLoginService.CreateAsync(userLogin);
             return CreatedAtAction(nameof(GetUserLogins), new { id = userLogin.UserId }, userLogin);
         }
     }

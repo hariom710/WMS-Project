@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using WMS.API.Data;
+using WMS.API.Helpers;
+using WMS.Application.DTOs;
+using WMS.Domain.Interfaces;
 using WMS.Domain.Models;
+using System.Security.Claims;
+using AutoMapper;
 
 namespace WMS.API.Controllers
 {
@@ -12,61 +14,79 @@ namespace WMS.API.Controllers
     [Authorize]
     public class AnnouncementsController : ControllerBase
     {
-        private readonly WMSDbContext _context;
+        private readonly IAnnouncementService _announcementService;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IMapper _mapper;
 
-        public AnnouncementsController(WMSDbContext context)
+        public AnnouncementsController(IAnnouncementService announcementService, ICurrentUserService currentUser, IMapper mapper)
         {
-            _context = context;
+            _announcementService = announcementService;
+            _currentUser = currentUser;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Announcement>>> GetAnnouncements()
+        public async Task<IActionResult> GetAnnouncements(
+            [FromQuery] string? search, [FromQuery] bool? isActive,
+            [FromQuery] string? sortBy, [FromQuery] string? sortDirection,
+            [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            return await _context.Announcements
-                .Include(a => a.CreatedByEmployee)
-                .OrderByDescending(a => a.CreatedOn)
-                .ToListAsync();
+            var result = await _announcementService.GetAllAsync(search, isActive, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<AnnouncementDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<AnnouncementDto>>.Ok(dtos, pagination));
         }
 
+        [HttpGet("deleted")]
         [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetDeletedAnnouncements(
+            [FromQuery] string? search, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            var result = await _announcementService.GetDeletedAsync(search, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<AnnouncementDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<AnnouncementDto>>.Ok(dtos, pagination));
+        }
+
         [HttpPost]
-        public async Task<ActionResult<Announcement>> PostAnnouncement(Announcement announcement)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostAnnouncement([FromBody] CreateAnnouncementDto dto)
         {
-            var userEmail = User.FindFirst(ClaimTypes.Name)?.Value;
-            var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Email == userEmail);
-
-            announcement.CreatedOn = DateTime.Now;
-            announcement.CreatedBy = employee != null ? employee.EmployeeId : 1;
-
-            _context.Announcements.Add(announcement);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetAnnouncements), new { id = announcement.AnnouncementId }, announcement);
+            var announcement = _mapper.Map<Announcement>(dto);
+            var userEmail = _currentUser.Username ?? "";
+            var (success, message) = await _announcementService.CreateAsync(announcement, userEmail);
+            return CreatedAtAction(nameof(GetAnnouncements), new { id = announcement.AnnouncementId }, ApiResponse<AnnouncementDto>.Ok(_mapper.Map<AnnouncementDto>(announcement)));
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutAnnouncement(int id, Announcement announcement)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutAnnouncement(int id, [FromBody] UpdateAnnouncementDto dto)
         {
-            if (id != announcement.AnnouncementId) return BadRequest();
-
-            _context.Entry(announcement).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Announcement updated!" });
+            var announcement = _mapper.Map<Announcement>(dto);
+            announcement.AnnouncementId = id;
+            var userEmail = _currentUser.Username ?? "";
+            var (success, message) = await _announcementService.UpdateAsync(id, announcement, userEmail);
+            return Ok(ApiResponse<object>.Ok(null!, message));
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAnnouncement(int id)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SoftDeleteAnnouncement(int id)
         {
-            var announcement = await _context.Announcements.FindAsync(id);
-            if (announcement == null) return NotFound();
+            var userEmail = _currentUser.Username ?? "";
+            var (success, message) = await _announcementService.SoftDeleteAsync(id, userEmail);
+            if (!success) return NotFound(ApiResponse<object>.Fail(message));
+            return Ok(ApiResponse<object>.Ok(null!, message));
+        }
 
-            _context.Announcements.Remove(announcement);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Announcement deleted!" });
+        [HttpPost("restore/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RestoreAnnouncement(int id)
+        {
+            var success = await _announcementService.RestoreAsync(id);
+            if (!success) return NotFound(ApiResponse<object>.Fail("Deleted announcement not found."));
+            return Ok(ApiResponse<object>.Ok(null!, "Announcement restored successfully!"));
         }
     }
 }

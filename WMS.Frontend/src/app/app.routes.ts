@@ -1,32 +1,60 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './auth/login/login';
-import { AuthGuard } from './auth/auth.guard'; // Add this import!
-
-// Import your other components...
-import { DashboardComponent } from './dashboard/dashboard';
-import { EmployeesComponent } from './employees/employees';
-import { AttendanceComponent } from './attendance/attendance';
-import { DepartmentsComponent } from './departments/departments';
-import { ProjectsComponent } from './projects/projects';
-import { LeavesComponent } from './leaves/leaves';
-import { AnnouncementsComponent } from './announcements/announcements';
-import { ChangePasswordComponent } from './auth/change-password/change-password';
-import { AllocationsComponent } from './allocations/allocations';
-import { ClientsComponent } from './clients/clients';
+import { AuthGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent }, // Unprotected
-  
-  // ---> ADD canActivate TO PROTECT THESE ROUTES <---
-  { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
-  { path: 'employees', component: EmployeesComponent, canActivate: [AuthGuard] },
-  { path: 'attendance', component: AttendanceComponent, canActivate: [AuthGuard] },
-  { path: 'departments', component: DepartmentsComponent, canActivate: [AuthGuard] },
-  { path: 'projects', component: ProjectsComponent, canActivate: [AuthGuard] },
-  { path: 'leaves', component: LeavesComponent, canActivate: [AuthGuard] },
-  { path: 'announcements', component: AnnouncementsComponent, canActivate: [AuthGuard] },
-  { path: 'allocations', component: AllocationsComponent, canActivate: [AuthGuard] },
-  { path: 'change-password', component: ChangePasswordComponent, canActivate: [AuthGuard] },
-  { path: 'clients', component: ClientsComponent, canActivate: [AuthGuard] },
+  {
+    path: 'login',
+    loadComponent: () => import('./auth/login/login').then(m => m.LoginComponent)
+  },
+  {
+    path: 'dashboard',
+    loadComponent: () => import('./dashboard/dashboard').then(m => m.DashboardComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'employees',
+    loadComponent: () => import('./employees/employees').then(m => m.EmployeesComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'attendance',
+    loadComponent: () => import('./attendance/attendance').then(m => m.AttendanceComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'departments',
+    loadComponent: () => import('./departments/departments').then(m => m.DepartmentsComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'projects',
+    loadComponent: () => import('./projects/projects').then(m => m.ProjectsComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'leaves',
+    loadComponent: () => import('./leaves/leaves').then(m => m.LeavesComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'announcements',
+    loadComponent: () => import('./announcements/announcements').then(m => m.AnnouncementsComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'allocations',
+    loadComponent: () => import('./allocations/allocations').then(m => m.AllocationsComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'change-password',
+    loadComponent: () => import('./auth/change-password/change-password').then(m => m.ChangePasswordComponent),
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'clients',
+    loadComponent: () => import('./clients/clients').then(m => m.ClientsComponent),
+    canActivate: [AuthGuard]
+  },
   { path: '', redirectTo: '/login', pathMatch: 'full' }
 ];

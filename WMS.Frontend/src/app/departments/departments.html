@@ -1,74 +1,96 @@
-<div style="padding: 30px; font-family: Roboto, sans-serif;">
-  <h2 style="color: #3f51b5; margin-bottom: 20px;">WMS Departments</h2>
-  
-  <div *ngIf="authService.isAdmin()" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px;">
-    
-    <h4 style="margin-top: 0; color: #555;">
-      {{ isEditMode ? 'Edit Department' : 'Create New Department' }}
-    </h4>
-    
-    <form [formGroup]="departmentForm" (ngSubmit)="onSubmit()">
-      <div style="display: flex; gap: 15px; align-items: flex-start;">
-        
-        <div style="flex: 1;">
-          <input type="text" formControlName="departmentName" placeholder="Department Name (e.g. HR)" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-        </div>
-
-        <div style="flex: 2;">
-          <input type="text" formControlName="description" placeholder="Description (Optional)" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-        </div>
-        
-        <div style="display: flex; gap: 10px;">
-          <button type="submit" [disabled]="departmentForm.invalid" style="background-color: #4caf50; color: white; border: none; padding: 11px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-            {{ isEditMode ? 'Update' : '+ Add' }}
-          </button>
-
-          <button *ngIf="isEditMode" type="button" (click)="cancelEdit()" style="background-color: #e91e63; color: white; border: none; padding: 11px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-            Cancel
-          </button>
-        </div>
-      </div>
-    </form>
+<div>
+  <!-- Page Header -->
+  <div class="page-header animate-slideUp">
+    <div class="page-header-left">
+      <h1>Departments</h1>
+      <p>Manage your organization's departments</p>
+    </div>
+    <div class="page-header-actions" *ngIf="authService.isAdmin()">
+      <button class="btn btn-primary" (click)="isEditMode ? cancelEdit() : null">
+        {{ isEditMode ? 'Cancel' : '+ New Department' }}
+      </button>
+    </div>
   </div>
 
-  <table mat-table [dataSource]="departments" class="mat-elevation-z8" style="width: 100%;">
-    
-    <ng-container matColumnDef="departmentId">
-      <th mat-header-cell *matHeaderCellDef> ID </th>
-      <td mat-cell *matCellDef="let element"> {{element.departmentId}} </td>
-    </ng-container>
+  <!-- Server Error -->
+  <div *ngIf="serverError" class="alert alert-danger animate-slideUp" role="alert">
+    <span>⚠️</span> {{ serverError }}
+  </div>
 
-    <ng-container matColumnDef="departmentName">
-      <th mat-header-cell *matHeaderCellDef> Department Name </th>
-      <td mat-cell *matCellDef="let element"> <strong>{{element.departmentName}}</strong> </td>
-    </ng-container>
+  <!-- Form Card -->
+  <div *ngIf="authService.isAdmin()" class="card animate-slideUp dept-form-card">
+    <div class="card-header">
+      <div class="card-header-title">{{ isEditMode ? '✏️ Edit Department' : '➕ Create New Department' }}</div>
+    </div>
+    <div class="card-body">
+      <form [formGroup]="departmentForm" (ngSubmit)="onSubmit()" aria-label="Department form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Department Name *</label>
+            <input type="text" class="form-input" formControlName="departmentName" placeholder="e.g. Human Resources">
+            <div *ngIf="f['departmentName'].touched && f['departmentName'].invalid" class="form-error">
+              <span *ngIf="f['departmentName'].errors?.['required']">Department name is required.</span>
+              <span *ngIf="f['departmentName'].errors?.['minlength']">Minimum 3 characters required.</span>
+              <span *ngIf="f['departmentName'].errors?.['maxlength']">Maximum 100 characters allowed.</span>
+              <span *ngIf="f['departmentName'].errors?.['pattern']">Cannot be only spaces.</span>
+            </div>
+          </div>
+          <div class="form-group dept-desc-field">
+            <label class="form-label">Description</label>
+            <input type="text" class="form-input" formControlName="description" placeholder="Optional description">
+            <div *ngIf="f['description'].touched && f['description'].invalid" class="form-error">
+              <span *ngIf="f['description'].errors?.['maxlength']">Maximum 500 characters allowed.</span>
+            </div>
+          </div>
+        </div>
+        <div class="dept-form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="departmentForm.invalid">
+            {{ isEditMode ? 'Update Department' : 'Create Department' }}
+          </button>
+          <button *ngIf="isEditMode" type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-    <ng-container matColumnDef="description">
-      <th mat-header-cell *matHeaderCellDef> Description </th>
-      <td mat-cell *matCellDef="let element"> {{element.description || 'N/A'}} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="createdOn">
-      <th mat-header-cell *matHeaderCellDef> Created On </th>
-      <td mat-cell *matCellDef="let element"> {{element.createdOn | date:'mediumDate'}} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="actions">
-      <th mat-header-cell *matHeaderCellDef style="text-align: right;"> Actions </th>
-      <td mat-cell *matCellDef="let element" style="text-align: right; padding-right: 15px;">
-        
-        <button (click)="editDepartment(element)" style="background: #ffb300; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; margin-right: 8px;">
-          Edit
-        </button>
-
-        <button (click)="deleteDepartment(element.departmentId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">
-          Delete
-        </button>
-
-      </td>
-    </ng-container>
-
-    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-  </table>
+  <!-- Table Card -->
+  <div class="card animate-slideUp">
+    <div class="card-header">
+      <div class="card-header-title">All Departments</div>
+      <span class="badge badge-neutral">{{ departments.length }} total</span>
+    </div>
+    <div class="table-wrapper" role="region" aria-label="Departments table">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Department Name</th>
+            <th>Description</th>
+            <th>Created On</th>
+            <th *ngIf="authService.isAdmin()" class="dept-actions-th">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="departments.length === 0">
+            <td [attr.colspan]="authService.isAdmin() ? 5 : 4" class="table-empty">
+              <div class="empty-state-icon">🏢</div>
+              <div>No departments found</div>
+            </td>
+          </tr>
+          <tr *ngFor="let dept of departments; trackBy: trackByDepartmentId" class="animate-fadeIn">
+            <td><span class="badge badge-neutral">#{{ dept.departmentId }}</span></td>
+            <td><strong>{{ dept.departmentName }}</strong></td>
+            <td class="dept-desc-text">{{ dept.description || '—' }}</td>
+            <td>{{ dept.createdOn | date:'mediumDate' }}</td>
+            <td *ngIf="authService.isAdmin()" class="dept-actions-cell">
+              <div class="dept-actions-row">
+                <button class="btn btn-sm btn-warning" (click)="editDepartment(dept)">✏️ Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteDepartment(dept.departmentId)">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>

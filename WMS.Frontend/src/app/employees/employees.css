@@ -1,0 +1,54 @@
+.emp-form-card {
+  margin-bottom: var(--space-6);
+}
+
+.emp-form-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.emp-table-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 1;
+}
+
+.emp-search-wrapper {
+  flex: 1;
+  max-width: 320px;
+}
+
+.emp-name-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.emp-email-cell {
+  color: var(--text-secondary);
+}
+
+.emp-actions-th {
+  text-align: right;
+}
+
+.emp-actions-cell {
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .emp-form-actions {
+    flex-direction: column;
+  }
+
+  .emp-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .emp-search-wrapper {
+    max-width: 100%;
+  }
+}

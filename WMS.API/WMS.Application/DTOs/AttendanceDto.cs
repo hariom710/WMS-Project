@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace WMS.Application.DTOs
 {
     public class AttendanceDto
@@ -14,7 +16,10 @@ namespace WMS.Application.DTOs
 
     public class CheckInDto
     {
+        [Required(ErrorMessage = "Employee ID is required.")]
         public int? EmpId { get; set; }
+
+        [Required(ErrorMessage = "Work mode is required.")]
         public string WorkMode { get; set; } = "Office";
     }
 }

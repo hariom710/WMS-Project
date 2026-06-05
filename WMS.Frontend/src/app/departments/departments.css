@@ -1,0 +1,40 @@
+.dept-form-card {
+  margin-bottom: var(--space-6);
+}
+
+.dept-form-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.dept-desc-field {
+  flex: 2;
+}
+
+.dept-actions-cell {
+  text-align: right;
+}
+
+.dept-actions-row {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.dept-desc-text {
+  color: var(--text-secondary);
+}
+
+.dept-actions-th {
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .dept-form-actions {
+    flex-direction: column;
+  }
+
+  .dept-actions-row {
+    flex-direction: column;
+  }
+}

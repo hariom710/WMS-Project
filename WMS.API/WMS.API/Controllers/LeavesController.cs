@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using WMS.API.Data;
+using WMS.API.Helpers;
+using WMS.Application.DTOs;
+using WMS.Domain.Interfaces;
 using WMS.Domain.Models;
+using System.Security.Claims;
+using AutoMapper;
 
 namespace WMS.API.Controllers
 {
@@ -12,113 +14,100 @@ namespace WMS.API.Controllers
     [Authorize]
     public class LeavesController : ControllerBase
     {
-        private readonly WMSDbContext _context;
+        private readonly ILeaveService _leaveService;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IMapper _mapper;
 
-        public LeavesController(WMSDbContext context)
+        public LeavesController(ILeaveService leaveService, ICurrentUserService currentUser, IMapper mapper)
         {
-            _context = context;
-        }
-
-        public class RejectRequest
-        {
-            public string? Reason { get; set; }
+            _leaveService = leaveService;
+            _currentUser = currentUser;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Leave>>> GetLeaves()
+        public async Task<IActionResult> GetLeaves(
+            [FromQuery] string? search, [FromQuery] string? status,
+            [FromQuery] string? sortBy, [FromQuery] string? sortDirection,
+            [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            return await _context.Leaves.Include(l => l.Employee).OrderByDescending(l => l.AppliedOn).ToListAsync();
+            var result = await _leaveService.GetAllAsync(search, status, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<LeaveDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<LeaveDto>>.Ok(dtos, pagination));
+        }
+
+        [HttpGet("deleted")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetDeletedLeaves(
+            [FromQuery] string? search, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            var result = await _leaveService.GetDeletedAsync(search, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<LeaveDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<LeaveDto>>.Ok(dtos, pagination));
         }
 
         [HttpGet("pending")]
         [Authorize(Roles = "Admin,Manager")]
-        public async Task<ActionResult<IEnumerable<Leave>>> GetPendingLeaves()
+        public async Task<IActionResult> GetPendingLeaves()
         {
-            return await _context.Leaves
-                .Include(l => l.Employee)
-                .Where(l => l.Status == "Pending")
-                .OrderBy(l => l.AppliedOn)
-                .ToListAsync();
+            var leaves = await _leaveService.GetPendingAsync();
+            return Ok(ApiResponse<IEnumerable<LeaveDto>>.Ok(_mapper.Map<IEnumerable<LeaveDto>>(leaves)));
         }
 
         [HttpPost]
-        public async Task<ActionResult<Leave>> PostLeave(Leave leave)
+        public async Task<IActionResult> PostLeave([FromBody] CreateLeaveDto dto)
         {
-            if (leave.FromDate >= leave.ToDate)
-            {
-                return BadRequest(new { message = "ToDate must be after FromDate." });
-            }
-
-            if (leave.FromDate < DateTime.Now.Date)
-            {
-                return BadRequest(new { message = "Leave cannot start in the past." });
-            }
-
-            var userEmail = User.FindFirst(ClaimTypes.Name)?.Value;
-            var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Email == userEmail);
-
-            leave.EmpId = employee != null ? employee.EmployeeId : 1;
-            leave.AppliedOn = DateTime.Now;
-            leave.Status = "Pending";
-
-            _context.Leaves.Add(leave);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetLeaves), new { id = leave.LeaveId }, leave);
+            var leave = _mapper.Map<Leave>(dto);
+            var userEmail = _currentUser.Username ?? "";
+            var (success, message) = await _leaveService.CreateAsync(leave, userEmail);
+            if (!success) return BadRequest(ApiResponse<object>.Fail(message));
+            return CreatedAtAction(nameof(GetLeaves), new { id = leave.LeaveId }, ApiResponse<LeaveDto>.Ok(_mapper.Map<LeaveDto>(leave)));
         }
 
         [HttpPut("approve/{id}")]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ApproveLeave(int id)
         {
-            var leave = await _context.Leaves.FindAsync(id);
-            if (leave == null) return NotFound();
-
-            var userEmail = User.FindFirst(ClaimTypes.Name)?.Value;
-            var manager = await _context.Employees.FirstOrDefaultAsync(e => e.Email == userEmail);
-
-            leave.Status = "Approved";
-            leave.ApprovedBy = manager?.EmployeeId ?? 1;
-            leave.ApprovedOn = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Leave Approved!" });
+            var userEmail = _currentUser.Username ?? "";
+            var (success, message) = await _leaveService.ApproveAsync(id, userEmail);
+            if (!success) return NotFound(ApiResponse<object>.Fail(message));
+            return Ok(ApiResponse<object>.Ok(null!, message));
         }
 
         [HttpPut("reject/{id}")]
         [Authorize(Roles = "Admin,Manager")]
-        public async Task<IActionResult> RejectLeave(int id, [FromBody] RejectRequest? request)
+        public async Task<IActionResult> RejectLeave(int id, [FromBody] RejectRequestDto? request)
         {
-            var leave = await _context.Leaves.FindAsync(id);
-            if (leave == null) return NotFound();
-
-            var userEmail = User.FindFirst(ClaimTypes.Name)?.Value;
-            var manager = await _context.Employees.FirstOrDefaultAsync(e => e.Email == userEmail);
-
-            leave.Status = "Rejected";
-            leave.ApprovedBy = manager?.EmployeeId ?? 1;
-            leave.ApprovedOn = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-            var msg = string.IsNullOrEmpty(request?.Reason) ? "Leave Rejected!" : $"Leave Rejected. Reason: {request.Reason}";
-            return Ok(new { message = msg });
+            var userEmail = _currentUser.Username ?? "";
+            var (success, message) = await _leaveService.RejectAsync(id, request?.Reason, userEmail);
+            if (!success) return NotFound(ApiResponse<object>.Fail(message));
+            return Ok(ApiResponse<object>.Ok(null!, message));
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> CancelLeave(int id)
+        public async Task<IActionResult> SoftDeleteLeave(int id)
         {
-            var leave = await _context.Leaves.FindAsync(id);
-            if (leave == null) return NotFound();
-
-            if (leave.Status != "Pending")
-            {
-                return BadRequest(new { message = "You can only cancel pending leaves." });
-            }
-
-            _context.Leaves.Remove(leave);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Leave cancelled successfully!" });
+            var userEmail = _currentUser.Username ?? "";
+            var (success, message) = await _leaveService.SoftDeleteAsync(id, userEmail);
+            if (!success) return BadRequest(ApiResponse<object>.Fail(message));
+            return Ok(ApiResponse<object>.Ok(null!, message));
         }
+
+        [HttpPost("restore/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RestoreLeave(int id)
+        {
+            var success = await _leaveService.RestoreAsync(id);
+            if (!success) return NotFound(ApiResponse<object>.Fail("Deleted leave not found."));
+            return Ok(ApiResponse<object>.Ok(null!, "Leave restored successfully!"));
+        }
+    }
+
+    public class RejectRequestDto
+    {
+        public string? Reason { get; set; }
     }
 }

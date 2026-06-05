@@ -1,102 +1,127 @@
-<div class="container mt-4" style="padding: 20px; font-family: Roboto, sans-serif;">
-  <h2 style="color: #3f51b5; margin-bottom: 20px;">Leave Management</h2>
-  
-  <div *ngIf="authService.isAdmin()" style="margin-bottom: 20px; display: flex; gap: 10px;">
-    <button (click)="activeTab = 'my-leaves'" 
-            [ngStyle]="{'background-color': activeTab === 'my-leaves' ? '#3f51b5' : '#e0e0e0', 'color': activeTab === 'my-leaves' ? 'white' : 'black'}" 
-            style="padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-      My Leaves
-    </button>
-    <button (click)="activeTab = 'manager-approvals'" 
-            [ngStyle]="{'background-color': activeTab === 'manager-approvals' ? '#3f51b5' : '#e0e0e0', 'color': activeTab === 'manager-approvals' ? 'white' : 'black'}" 
-            style="padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-      Team Requests (Manager)
-    </button>
+<div>
+  <!-- Page Header -->
+  <div class="page-header animate-slideUp">
+    <div class="page-header-left">
+      <h1>Leave Management</h1>
+      <p>Apply, track, and manage employee leave requests</p>
+    </div>
+    <div class="page-header-actions">
+      <button class="btn btn-sm btn-outline" (click)="exportExcel()" [disabled]="exportingExcel">
+        {{ exportingExcel ? '⏳' : '📊' }} Excel
+      </button>
+      <button class="btn btn-sm btn-outline" (click)="exportPdf()" [disabled]="exportingPdf">
+        {{ exportingPdf ? '⏳' : '📄' }} PDF
+      </button>
+    </div>
   </div>
 
-  <div *ngIf="activeTab === 'my-leaves'">
-    <div class="card mb-4" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <div class="card-header text-white" style="background-color: #3f51b5; padding: 15px; font-weight: bold; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-        Apply for Leave
-      </div>
-      <div class="card-body" style="padding: 20px;">
-        <form [formGroup]="leaveForm" (ngSubmit)="onSubmit()">
-          
-          <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-            <div *ngIf="authService.isAdmin()" style="flex: 1;">
-              <label style="font-weight: bold; display: block; margin-bottom: 5px;">Select Employee</label>
-              <select class="form-control" formControlName="empId" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
-                <option [ngValue]="null" disabled selected>Select Employee...</option>
-                <option *ngFor="let emp of employees" [value]="emp.employeeId">
-                  {{ emp.firstName }} {{ emp.lastName }}
-                </option>
-              </select>
-            </div>
+  <!-- Server Error -->
+  <div *ngIf="serverError" class="alert alert-danger animate-slideUp" role="alert">
+    <span>⚠️</span> {{ serverError }}
+  </div>
 
-            <div style="flex: 1;">
-              <label style="font-weight: bold; display: block; margin-bottom: 5px;">Leave Type</label>
-              <select class="form-control" formControlName="leaveType" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
-                <option value="Sick">Sick Leave</option>
-                <option value="Casual">Casual Leave</option>
-                <option value="Earned">Earned Leave</option>
+  <!-- Tabs -->
+  <div *ngIf="authService.isAdmin()" class="leave-tabs animate-slideUp" role="tablist" aria-label="Leave management tabs">
+    <div class="tabs">
+      <button class="tab-btn" [class.active]="activeTab === 'my-leaves'" (click)="activeTab = 'my-leaves'">My Leaves</button>
+      <button class="tab-btn" [class.active]="activeTab === 'manager-approvals'" (click)="activeTab = 'manager-approvals'">Team Requests</button>
+    </div>
+  </div>
+
+  <!-- My Leaves Tab -->
+  <div *ngIf="activeTab === 'my-leaves'">
+    <!-- Apply Form -->
+    <div class="card animate-slideUp leave-form-card">
+      <div class="card-header">
+        <div class="card-header-title">📝 Apply for Leave</div>
+      </div>
+      <div class="card-body">
+        <form [formGroup]="leaveForm" (ngSubmit)="onSubmit()">
+          <div class="form-row">
+            <div *ngIf="authService.isAdmin()" class="form-group">
+              <label class="form-label">Employee</label>
+              <select class="form-select" formControlName="empId">
+                <option [ngValue]="null" disabled>Select Employee</option>
+                <option *ngFor="let emp of employees; trackBy: trackByEmployeeId" [value]="emp.employeeId">{{ emp.firstName }} {{ emp.lastName }}</option>
               </select>
             </div>
-          </div>
-  
-          <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-            <div style="flex: 1;">
-              <label style="font-weight: bold; display: block; margin-bottom: 5px;">From Date</label>
-              <input type="datetime-local" class="form-control" formControlName="fromDate" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-  
-            <div style="flex: 1;">
-              <label style="font-weight: bold; display: block; margin-bottom: 5px;">To Date</label>
-              <input type="datetime-local" class="form-control" formControlName="toDate" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="form-group">
+              <label class="form-label">Leave Type *</label>
+              <select class="form-select" formControlName="leaveType">
+                <option value="Sick">🏥 Sick Leave</option>
+                <option value="Casual">🌴 Casual Leave</option>
+                <option value="Earned">⭐ Earned Leave</option>
+              </select>
+              <div *ngIf="f['leaveType'].touched && f['leaveType'].invalid" class="form-error">Leave type is required.</div>
             </div>
           </div>
-  
-          <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Reason</label>
-            <input type="text" class="form-control" formControlName="reason" placeholder="Brief reason for leave..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">From Date *</label>
+              <input type="datetime-local" class="form-input" formControlName="fromDate">
+              <div *ngIf="f['fromDate'].touched && f['fromDate'].invalid" class="form-error">From date is required.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">To Date *</label>
+              <input type="datetime-local" class="form-input" formControlName="toDate">
+              <div *ngIf="f['toDate'].touched && f['toDate'].invalid" class="form-error">To date is required.</div>
+              <div *ngIf="leaveForm.errors?.['dateRange'] && f['toDate'].touched" class="form-error">To date must be after from date.</div>
+            </div>
           </div>
-  
-          <button type="submit" [disabled]="leaveForm.invalid" style="background-color: #4caf50; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-            Submit Application
-          </button>
+          <div class="form-group">
+            <label class="form-label">Reason *</label>
+            <input type="text" class="form-input" formControlName="reason" placeholder="Describe the reason for your leave (min 10 characters)">
+            <div *ngIf="f['reason'].touched && f['reason'].invalid" class="form-error">
+              <span *ngIf="f['reason'].errors?.['required']">Reason is required.</span>
+              <span *ngIf="f['reason'].errors?.['minlength']">Minimum 10 characters required.</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" [disabled]="leaveForm.invalid">Submit Application</button>
         </form>
       </div>
     </div>
-  
-    <div class="card" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <div class="card-header" style="background-color: #f5f5f5; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">
-        My Leave History
+
+    <!-- Leave History -->
+    <div class="card animate-slideUp">
+      <div class="card-header">
+        <div class="card-header-title">Leave History</div>
+        <span class="badge badge-neutral">{{ leaves.length }} records</span>
       </div>
-      <div class="card-body" style="padding: 0;">
-        <table style="width: 100%; border-collapse: collapse;">
+      <div class="table-wrapper">
+        <table class="data-table">
           <thead>
-            <tr style="background-color: #f9f9f9; text-align: left;">
-              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Leave Type</th>
-              <th style="padding: 15px; border-bottom: 2px solid #ddd;">From</th>
-              <th style="padding: 15px; border-bottom: 2px solid #ddd;">To</th>
-              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Status</th>
-              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Action</th>
+            <tr>
+              <th>Leave Type</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngIf="leaves.length === 0">
-              <td colspan="5" style="padding: 20px; text-align: center; color: #888; font-style: italic;">No leave history found.</td>
-            </tr>
-            <tr *ngFor="let l of leaves" style="border-bottom: 1px solid #eee;">
-              <td style="padding: 15px; font-weight: bold; color: #333;">{{ l.leaveType }}</td>
-              <td style="padding: 15px; color: #555;">{{ l.fromDate | date:'medium' }}</td>
-              <td style="padding: 15px; color: #555;">{{ l.toDate | date:'medium' }}</td>
-              <td style="padding: 15px; font-weight: bold;" [ngStyle]="{'color': l.status === 'Approved' ? '#4caf50' : (l.status === 'Rejected' ? '#e53935' : '#ff9800')}">
-                {{ l.status }}
+              <td colspan="6" class="table-empty">
+                <div class="empty-state-icon">📅</div>
+                <div>No leave history found</div>
               </td>
-              <td style="padding: 15px;">
-                <button *ngIf="l.status === 'Pending'" (click)="cancelLeave(l.leaveId)" style="background: #e0e0e0; color: #333; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
-                  Cancel
-                </button>
+            </tr>
+            <tr *ngFor="let l of leaves; trackBy: trackByLeaveId" class="animate-fadeIn">
+              <td><strong>{{ l.leaveType }}</strong></td>
+              <td>{{ l.fromDate | date:'medium' }}</td>
+              <td>{{ l.toDate | date:'medium' }}</td>
+              <td class="leave-reason-cell">{{ l.reason }}</td>
+              <td>
+                <span class="badge" [ngClass]="{
+                  'badge-warning': l.status === 'Pending',
+                  'badge-success': l.status === 'Approved',
+                  'badge-danger': l.status === 'Rejected'
+                }">
+                  <span class="badge-dot"></span>{{ l.status }}
+                </span>
+              </td>
+              <td>
+                <button *ngIf="l.status === 'Pending'" class="btn btn-sm btn-secondary" (click)="cancelLeave(l.leaveId)">Cancel</button>
               </td>
             </tr>
           </tbody>
@@ -105,34 +130,46 @@
     </div>
   </div>
 
+  <!-- Manager Approvals Tab -->
   <div *ngIf="authService.isAdmin() && activeTab === 'manager-approvals'">
-    <div class="card" style="border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <div class="card-header" style="background-color: #f5f5f5; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">
-        Pending Team Leaves
+    <div class="card animate-slideUp">
+      <div class="card-header">
+        <div class="card-header-title">Pending Team Requests</div>
+        <span class="badge badge-warning">{{ pendingTeamLeaves.length }} pending</span>
       </div>
-      <div class="card-body" style="padding: 0;">
-        <table style="width: 100%; border-collapse: collapse;">
+      <div class="table-wrapper">
+        <table class="data-table">
           <thead>
-            <tr style="background-color: #f9f9f9; text-align: left;">
-              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Employee</th>
-              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Leave Type</th>
-              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Dates</th>
-              <th style="padding: 15px; border-bottom: 2px solid #ddd;">Reason</th>
-              <th style="padding: 15px; border-bottom: 2px solid #ddd; text-align: right;">Action</th>
+            <tr>
+              <th>Employee</th>
+              <th>Leave Type</th>
+              <th>Dates</th>
+              <th>Reason</th>
+              <th class="leave-actions-th">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngIf="pendingTeamLeaves.length === 0">
-              <td colspan="5" style="padding: 20px; text-align: center; color: #888; font-style: italic;">No pending leaves to review.</td>
+              <td colspan="5" class="table-empty">
+                <div class="empty-state-icon">✅</div>
+                <div>No pending leaves to review</div>
+              </td>
             </tr>
-            <tr *ngFor="let l of pendingTeamLeaves" style="border-bottom: 1px solid #eee;">
-              <td style="padding: 15px; font-weight: bold; color: #333;">{{ l.employee?.firstName }} {{ l.employee?.lastName }}</td>
-              <td style="padding: 15px;">{{ l.leaveType }}</td>
-              <td style="padding: 15px; color: #555;">{{ l.fromDate | date:'shortDate' }} - {{ l.toDate | date:'shortDate' }}</td>
-              <td style="padding: 15px; color: #555;">{{ l.reason }}</td>
-              <td style="padding: 15px; text-align: right;">
-                <button (click)="approveLeave(l.leaveId)" style="background: #4caf50; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px;">Approve</button>
-                <button (click)="rejectLeave(l.leaveId)" style="background: #e53935; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Reject</button>
+            <tr *ngFor="let l of pendingTeamLeaves; trackBy: trackByLeaveId" class="animate-fadeIn">
+              <td>
+                <div class="leave-name-cell">
+                  <div class="avatar avatar-sm avatar-primary">{{ l.employee?.firstName?.charAt(0) }}{{ l.employee?.lastName?.charAt(0) }}</div>
+                  <strong>{{ l.employee?.firstName }} {{ l.employee?.lastName }}</strong>
+                </div>
+              </td>
+              <td><span class="badge badge-primary">{{ l.leaveType }}</span></td>
+              <td>{{ l.fromDate | date:'shortDate' }} — {{ l.toDate | date:'shortDate' }}</td>
+              <td class="leave-reason-cell">{{ l.reason }}</td>
+              <td class="leave-actions-cell">
+                <div class="leave-actions-row">
+                  <button class="btn btn-sm btn-success" (click)="approveLeave(l.leaveId)">✅ Approve</button>
+                  <button class="btn btn-sm btn-danger" (click)="rejectLeave(l.leaveId)">❌ Reject</button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -140,5 +177,4 @@
       </div>
     </div>
   </div>
-
 </div>

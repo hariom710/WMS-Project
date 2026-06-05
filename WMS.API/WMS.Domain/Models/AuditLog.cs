@@ -16,8 +16,18 @@ namespace WMS.Domain.Models
         [Required, MaxLength(20)]
         public string Action { get; set; }
 
-        public int CreatedBy { get; set; }
+        [MaxLength(500)]
+        public string? Description { get; set; }
 
-        public DateTime CreatedOn { get; set; } = DateTime.Now;
+        [MaxLength(100)]
+        public string? Username { get; set; }
+
+        [MaxLength(50)]
+        public string? UserRole { get; set; }
+
+        [MaxLength(100)]
+        public string? IpAddress { get; set; }
+
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 }

@@ -1,0 +1,27 @@
+.alloc-form-card {
+  margin-bottom: var(--space-6);
+}
+
+.alloc-name-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.alloc-created-cell {
+  color: var(--text-secondary);
+}
+
+.alloc-actions-th {
+  text-align: right;
+}
+
+.alloc-actions-cell {
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .alloc-actions-cell {
+    text-align: left;
+  }
+}

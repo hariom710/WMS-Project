@@ -1,65 +1,55 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WMS.API.Data;
+using WMS.Domain.Interfaces;
 using WMS.Domain.Models;
+using AutoMapper;
 
 namespace WMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // Added security
+    [Authorize]
     public class RolesController : ControllerBase
     {
-        private readonly WMSDbContext _context;
+        private readonly IRoleService _roleService;
+        private readonly IMapper _mapper;
 
-        public RolesController(WMSDbContext context)
+        public RolesController(IRoleService roleService, IMapper mapper)
         {
-            _context = context;
+            _roleService = roleService;
+            _mapper = mapper;
         }
 
-        // GET: api/Roles
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Role>>> GetRoles()
+        public async Task<IActionResult> GetRoles()
         {
-            return await _context.Roles.ToListAsync();
+            var roles = await _roleService.GetAllAsync();
+            return Ok(roles);
         }
 
-        // POST: api/Roles
-        [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<ActionResult<Role>> PostRole(Role role)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostRole([FromBody] Role role)
         {
-            _context.Roles.Add(role);
-            await _context.SaveChangesAsync();
-
+            await _roleService.CreateAsync(role);
             return CreatedAtAction(nameof(GetRoles), new { id = role.RoleId }, role);
         }
 
-        // PUT: api/Roles/5
-        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutRole(int id, Role role)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutRole(int id, [FromBody] Role role)
         {
-            if (id != role.RoleId) return BadRequest();
-
-            _context.Entry(role).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-
+            var success = await _roleService.UpdateAsync(id, role);
+            if (!success) return BadRequest(new { message = "ID mismatch." });
             return Ok(new { message = "Role updated successfully!" });
         }
 
-        // DELETE: api/Roles/5
-        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteRole(int id)
         {
-            var role = await _context.Roles.FindAsync(id);
-            if (role == null) return NotFound();
-
-            _context.Roles.Remove(role);
-            await _context.SaveChangesAsync();
-
+            var success = await _roleService.DeleteAsync(id);
+            if (!success) return NotFound(new { message = "Role not found." });
             return Ok(new { message = "Role deleted successfully!" });
         }
     }

@@ -2,7 +2,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using WMS.API.Data;
+using WMS.Infrastructure.Data;
+using WMS.Infrastructure.Repositories;
+using WMS.Infrastructure.Services;
+using WMS.Domain.Interfaces;
 using WMS.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,9 +28,11 @@ var jwtKey = builder.Configuration["Jwt:Key"]
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "WMS_API";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "WMS_Frontend";
 
+// ── EF Core with SQL Server ──
 builder.Services.AddDbContext<WMSDbContext>(options =>
     options.UseSqlServer(connStr));
 
+// ── CORS ──
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular",
@@ -42,6 +47,7 @@ builder.Services.AddCors(options =>
         });
 });
 
+// ── Authentication ──
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -59,9 +65,40 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddScoped<WMS.API.Interfaces.IEmployeeRepository, WMS.API.Repositories.EmployeeRepository>();
-builder.Services.AddScoped<WMS.API.Interfaces.IEmployeeService, WMS.API.Services.EmployeeService>();
+// ── Current User ──
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 
+// ── Repositories ──
+builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
+builder.Services.AddScoped<ILeaveRepository, LeaveRepository>();
+builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
+builder.Services.AddScoped<IAllocationRepository, AllocationRepository>();
+builder.Services.AddScoped<IClientRepository, ClientRepository>();
+builder.Services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IUserLoginRepository, UserLoginRepository>();
+
+// ── Services ──
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ILeaveService, LeaveService>();
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<IAllocationService, AllocationService>();
+builder.Services.AddScoped<IClientService, ClientService>();
+builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IUserLoginService, UserLoginService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IPdfReportService, PdfReportService>();
+
+// ── AutoMapper ──
 builder.Services.AddAutoMapper(typeof(WMS.Application.Mapping.MappingProfile));
 
 builder.Services.AddControllers();

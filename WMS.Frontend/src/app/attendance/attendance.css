@@ -1,0 +1,83 @@
+.att-form-card {
+  margin-bottom: var(--space-6);
+}
+
+.att-checkin-row {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.att-employee-field {
+  flex: 2;
+  min-width: 250px;
+}
+
+.att-workmode-field {
+  flex: 1;
+  min-width: 150px;
+}
+
+.att-records-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.att-month-select {
+  width: auto;
+  height: 36px;
+  font-size: 12px;
+}
+
+.att-year-input {
+  width: 90px;
+  height: 36px;
+  font-size: 12px;
+}
+
+.att-name-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.att-checkin-time {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.att-checkout-time {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.att-no-data {
+  color: var(--text-muted);
+}
+
+.att-actions-th {
+  text-align: right;
+}
+
+.att-actions-cell {
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .att-checkin-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .att-employee-field,
+  .att-workmode-field {
+    min-width: 100%;
+    flex: 1;
+  }
+
+  .att-records-header {
+    flex-wrap: wrap;
+  }
+}

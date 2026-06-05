@@ -28,7 +28,7 @@ namespace WMS.Application.Mapping
             CreateMap<CreateLeaveDto, Leave>();
 
             CreateMap<Project, ProjectDto>()
-                .ForMember(d => d.ClientName, o => o.Ignore());
+                .ForMember(d => d.ClientName, o => o.MapFrom(s => s.Client != null ? s.Client.ClientName : null));
             CreateMap<CreateProjectDto, Project>();
             CreateMap<UpdateProjectDto, Project>();
 
@@ -42,9 +42,13 @@ namespace WMS.Application.Mapping
 
             CreateMap<CreateAllocationDto, ProjectAllocation>();
 
-            CreateMap<Announcement, AnnouncementDto>();
+            CreateMap<Announcement, AnnouncementDto>()
+                .ForMember(d => d.CreatedByName, o => o.MapFrom(s => s.CreatedByEmployee != null ? s.CreatedByEmployee.FirstName + " " + s.CreatedByEmployee.LastName : null))
+                .ForMember(d => d.CreatedDate, o => o.MapFrom(s => s.CreatedDate));
             CreateMap<CreateAnnouncementDto, Announcement>();
             CreateMap<UpdateAnnouncementDto, Announcement>();
+
+            CreateMap<AuditLog, AuditLogDto>();
         }
     }
 }

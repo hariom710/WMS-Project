@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WMS.API.Data;
-using WMS.API.Interfaces;
+using WMS.API.Helpers;
+using WMS.Application.DTOs;
+using WMS.Domain.Interfaces;
 using WMS.Domain.Models;
+using AutoMapper;
 
 namespace WMS.API.Controllers
 {
@@ -13,116 +14,94 @@ namespace WMS.API.Controllers
     public class EmployeesController : ControllerBase
     {
         private readonly IEmployeeService _employeeService;
-        private readonly WMSDbContext _context;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IMapper _mapper;
 
-        public EmployeesController(IEmployeeService employeeService, WMSDbContext context)
+        public EmployeesController(IEmployeeService employeeService, ICurrentUserService currentUser, IMapper mapper)
         {
             _employeeService = employeeService;
-            _context = context;
+            _currentUser = currentUser;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Employee>>> GetEmployees(
-            [FromQuery] string? search,
-            [FromQuery] string? department,
-            [FromQuery] string? status,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 50)
+        public async Task<IActionResult> GetEmployees(
+            [FromQuery] string? search, [FromQuery] string? department,
+            [FromQuery] string? status, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            var query = _context.Employees
-                .Include(e => e.Department)
-                .Include(e => e.Role)
-                .AsQueryable();
+            var result = await _employeeService.GetAllAsync(search, department, status, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<EmployeeDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<EmployeeDto>>.Ok(dtos, pagination));
+        }
 
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.ToLower();
-                query = query.Where(e =>
-                    e.FirstName.ToLower().Contains(term) ||
-                    e.LastName.ToLower().Contains(term) ||
-                    e.Email.ToLower().Contains(term));
-            }
-
-            if (!string.IsNullOrWhiteSpace(department))
-            {
-                query = query.Where(e => e.Department != null && e.Department.DepartmentName.ToLower() == department.ToLower());
-            }
-
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                query = query.Where(e => e.Status.ToLower() == status.ToLower());
-            }
-
-            var total = await query.CountAsync();
-            var employees = await query
-                .OrderBy(e => e.FirstName)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            Response.Headers["X-Total-Count"] = total.ToString();
-            Response.Headers["X-Page"] = page.ToString();
-            Response.Headers["X-Page-Size"] = pageSize.ToString();
-
-            return Ok(employees);
+        [HttpGet("deleted")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetDeletedEmployees(
+            [FromQuery] string? search, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            var result = await _employeeService.GetDeletedAsync(search, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<EmployeeDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<EmployeeDto>>.Ok(dtos, pagination));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Employee>> GetEmployee(int id)
+        public async Task<IActionResult> GetEmployee(int id)
         {
-            var employee = await _employeeService.GetEmployeeByIdAsync(id);
-
-            if (employee == null)
-                return NotFound();
-
-            return Ok(employee);
+            var employee = await _employeeService.GetByIdAsync(id);
+            if (employee == null) return NotFound(ApiResponse<object>.Fail("Employee not found."));
+            return Ok(ApiResponse<EmployeeDto>.Ok(_mapper.Map<EmployeeDto>(employee)));
         }
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<Employee>> PostEmployee(Employee employee)
+        public async Task<IActionResult> PostEmployee([FromBody] CreateEmployeeDto dto)
         {
-            var createdEmployee = await _employeeService.CreateEmployeeWithLoginAsync(employee);
+            var employee = _mapper.Map<Employee>(dto);
+            employee.FirstName = employee.FirstName?.Trim();
+            employee.LastName = employee.LastName?.Trim();
+            employee.Email = employee.Email?.Trim().ToLower();
+            employee.PhoneNumber = employee.PhoneNumber?.Trim();
 
-            return CreatedAtAction(nameof(GetEmployee), new { id = createdEmployee.EmployeeId }, createdEmployee);
+            var created = await _employeeService.CreateWithLoginAsync(employee, _currentUser.Username);
+            return CreatedAtAction(nameof(GetEmployee), new { id = created.EmployeeId }, ApiResponse<EmployeeDto>.Ok(_mapper.Map<EmployeeDto>(created)));
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> PutEmployee(int id, Employee employee)
+        public async Task<IActionResult> PutEmployee(int id, [FromBody] UpdateEmployeeDto dto)
         {
-            var success = await _employeeService.UpdateEmployeeAsync(id, employee);
+            var employee = _mapper.Map<Employee>(dto);
+            employee.EmployeeId = id;
+            employee.FirstName = employee.FirstName?.Trim();
+            employee.LastName = employee.LastName?.Trim();
+            employee.Email = employee.Email?.Trim().ToLower();
+            employee.PhoneNumber = employee.PhoneNumber?.Trim();
 
-            if (!success)
-                return BadRequest(new { message = "Update failed. Check ID mismatch or if employee exists." });
-
-            return Ok(new { message = "Employee updated successfully!" });
+            var success = await _employeeService.UpdateAsync(id, employee, _currentUser.Username);
+            if (!success) return BadRequest(ApiResponse<object>.Fail("Update failed."));
+            return Ok(ApiResponse<object>.Ok(null!, "Employee updated successfully!"));
         }
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteEmployee(int id)
         {
-            var employee = await _context.Employees.FindAsync(id);
-            if (employee == null)
-                return NotFound(new { message = "Employee not found." });
+            var success = await _employeeService.SoftDeleteAsync(id, _currentUser.Username);
+            if (!success) return NotFound(ApiResponse<object>.Fail("Employee not found."));
+            return Ok(ApiResponse<object>.Ok(null!, "Employee deleted successfully!"));
+        }
 
-            var hasAttendance = await _context.Attendances.AnyAsync(a => a.EmpId == id);
-            if (hasAttendance)
-            {
-                return BadRequest(new { message = "Cannot delete employee with attendance records. Deactivate instead." });
-            }
-
-            var userLogin = await _context.UserLogins.FirstOrDefaultAsync(u => u.Username == employee.Email);
-            if (userLogin != null)
-            {
-                _context.UserLogins.Remove(userLogin);
-            }
-
-            _context.Employees.Remove(employee);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Employee and associated login deleted successfully!" });
+        [HttpPost("restore/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RestoreEmployee(int id)
+        {
+            var success = await _employeeService.RestoreAsync(id);
+            if (!success) return NotFound(ApiResponse<object>.Fail("Deleted employee not found."));
+            return Ok(ApiResponse<object>.Ok(null!, "Employee restored successfully!"));
         }
     }
 }

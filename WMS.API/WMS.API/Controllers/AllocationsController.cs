@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using WMS.API.Data;
+using WMS.API.Helpers;
+using WMS.Application.DTOs;
+using WMS.Domain.Interfaces;
 using WMS.Domain.Models;
+using System.Security.Claims;
+using AutoMapper;
 
 namespace WMS.API.Controllers
 {
@@ -12,56 +14,68 @@ namespace WMS.API.Controllers
     [Authorize]
     public class AllocationsController : ControllerBase
     {
-        private readonly WMSDbContext _context;
+        private readonly IAllocationService _allocationService;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IMapper _mapper;
 
-        public AllocationsController(WMSDbContext context)
+        public AllocationsController(IAllocationService allocationService, ICurrentUserService currentUser, IMapper mapper)
         {
-            _context = context;
+            _allocationService = allocationService;
+            _currentUser = currentUser;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProjectAllocation>>> GetAllocations()
+        public async Task<IActionResult> GetAllocations(
+            [FromQuery] string? search, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            return await _context.ProjectAllocations
-                .Include(a => a.Employee)
-                .Include(a => a.Project)
-                .OrderByDescending(a => a.CreateDate)
-                .ToListAsync();
+            var result = await _allocationService.GetAllAsync(search, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<AllocationDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<AllocationDto>>.Ok(dtos, pagination));
         }
 
+        [HttpGet("deleted")]
         [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetDeletedAllocations(
+            [FromQuery] string? search, [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            var result = await _allocationService.GetDeletedAsync(search, sortBy, sortDirection, page, pageSize);
+            var dtos = _mapper.Map<IEnumerable<AllocationDto>>(result.Items);
+            var pagination = new PaginationInfo { Page = result.Page, PageSize = result.PageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<IEnumerable<AllocationDto>>.Ok(dtos, pagination));
+        }
+
         [HttpPost]
-        public async Task<ActionResult<ProjectAllocation>> PostAllocation(ProjectAllocation allocation)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PostAllocation([FromBody] CreateAllocationDto dto)
         {
-            var userEmail = User.FindFirst(ClaimTypes.Name)?.Value;
-            var admin = await _context.Employees.FirstOrDefaultAsync(e => e.Email == userEmail);
-
-            allocation.CreateDate = DateTime.Now;
-            allocation.CreatedBy = admin != null ? $"{admin.FirstName} {admin.LastName}" : "System Admin";
-            allocation.Status = true;
-
-            var exists = await _context.ProjectAllocations
-                .AnyAsync(a => a.EmpId == allocation.EmpId && a.ProjectId == allocation.ProjectId);
-
-            if (exists) return BadRequest(new { message = "This employee is already assigned to this project." });
-
-            _context.ProjectAllocations.Add(allocation);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetAllocations), new { id = allocation.AllocationId }, allocation);
+            var allocation = _mapper.Map<ProjectAllocation>(dto);
+            var userEmail = _currentUser.Username ?? "";
+            var (success, message) = await _allocationService.CreateAsync(allocation, userEmail);
+            if (!success) return BadRequest(ApiResponse<object>.Fail(message));
+            return CreatedAtAction(nameof(GetAllocations), new { id = allocation.AllocationId }, ApiResponse<AllocationDto>.Ok(_mapper.Map<AllocationDto>(allocation)));
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAllocation(int id)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SoftDeleteAllocation(int id)
         {
-            var allocation = await _context.ProjectAllocations.FindAsync(id);
-            if (allocation == null) return NotFound();
+            var userEmail = _currentUser.Username ?? "";
+            var (success, message) = await _allocationService.SoftDeleteAsync(id, userEmail);
+            if (!success) return NotFound(ApiResponse<object>.Fail(message));
+            return Ok(ApiResponse<object>.Ok(null!, message));
+        }
 
-            _context.ProjectAllocations.Remove(allocation);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Allocation removed successfully!" });
+        [HttpPost("restore/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RestoreAllocation(int id)
+        {
+            var success = await _allocationService.RestoreAsync(id);
+            if (!success) return NotFound(ApiResponse<object>.Fail("Deleted allocation not found."));
+            return Ok(ApiResponse<object>.Ok(null!, "Allocation restored successfully!"));
         }
     }
 }

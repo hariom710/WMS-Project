@@ -1,22 +1,30 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, DestroyRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api';
 import { AuthService } from '../auth/auth';
 import { MatTableModule } from '@angular/material/table';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-attendance',
   standalone: true,
   imports: [CommonModule, MatTableModule, FormsModule],
   templateUrl: './attendance.html',
-  styleUrls: ['./attendance.css']
+  styleUrls: ['./attendance.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AttendanceComponent implements OnInit {
+export class AttendanceComponent implements OnInit, OnDestroy {
+  private destroyRef = inject(DestroyRef);
+
   attendances: any[] = [];
   employees: any[] = [];
+  serverError: string = '';
 
   displayedColumns: string[] = ['id', 'employee', 'date', 'checkIn', 'workMode', 'checkOut', 'totalHours', 'reports'];
+
+  exportingExcel = false;
+  exportingPdf = false;
 
   newAttendance: any = {
     empId: null,
@@ -49,12 +57,30 @@ export class AttendanceComponent implements OnInit {
     this.loadData();
   }
 
+  ngOnDestroy(): void {}
+
+  trackByEmployeeId(_index: number, emp: any): number {
+    return emp.employeeId;
+  }
+
+  trackByMonthValue(_index: number, m: any): number {
+    return m.value;
+  }
+
+  trackByAttendanceId(_index: number, record: any): number {
+    return record.attendanceId;
+  }
+
   loadEmployees() {
-    this.api.getEmployees().subscribe(data => this.employees = data);
+    this.api.getEmployees().pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(data => this.employees = data);
   }
 
   loadData() {
-    this.api.getMonthlyAttendance(this.currentMonth, this.currentYear).subscribe({
+    this.api.getMonthlyAttendance(this.currentMonth, this.currentYear).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
       next: (data) => {
         this.attendances = data.map((record: any) => {
           if (record.checkIn && !record.checkIn.endsWith('Z')) {
@@ -75,35 +101,45 @@ export class AttendanceComponent implements OnInit {
   }
 
   onSubmit() {
+    this.serverError = '';
     if (this.authService.isAdmin()) {
       if (!this.newAttendance.empId) {
-        alert("Please select an employee!");
+        this.serverError = 'Please select an employee.';
         return;
       }
       this.newAttendance.checkIn = new Date().toISOString();
       this.newAttendance.attendanceDate = new Date().toISOString();
-      this.api.addAttendance(this.newAttendance).subscribe({
+      this.api.addAttendance(this.newAttendance).pipe(
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe({
         next: () => {
           alert('Clocked in successfully!');
           this.loadData();
           this.newAttendance.empId = null;
         },
-        error: (err: unknown) => console.error('Error logging attendance', err)
+        error: (err: any) => {
+          this.serverError = err.error?.message || 'Error logging attendance.';
+        }
       });
     } else {
-      this.api.checkIn(this.newAttendance.workMode).subscribe({
+      this.api.checkIn(this.newAttendance.workMode).pipe(
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe({
         next: () => {
           alert('Clocked in successfully!');
           this.loadData();
         },
-        error: (err: unknown) => console.error('Error logging attendance', err)
+        error: (err: any) => {
+          this.serverError = err.error?.message || 'Error logging attendance.';
+        }
       });
     }
   }
 
   onCheckOut(record: any) {
+    this.serverError = '';
     if (this.authService.isAdmin()) {
-      if(confirm(`Are you sure you want to clock out ${record.employee?.firstName}?`)) {
+      if (confirm(`Are you sure you want to clock out ${record.employee?.firstName}?`)) {
         const updatedRecord = { ...record };
         let checkInStr = record.checkIn;
         if (!checkInStr.endsWith('Z')) {
@@ -115,32 +151,43 @@ export class AttendanceComponent implements OnInit {
         const diffInMilliseconds = checkOutDate.getTime() - checkInTime;
         const totalHrs = diffInMilliseconds / (1000 * 60 * 60);
         updatedRecord.totalHours = Math.round(totalHrs * 100) / 100;
-        this.api.updateAttendance(record.attendanceId, updatedRecord).subscribe({
+        this.api.updateAttendance(record.attendanceId, updatedRecord).pipe(
+          takeUntilDestroyed(this.destroyRef)
+        ).subscribe({
           next: () => {
             alert('Employee checked out successfully!');
             this.loadData();
           },
-          error: (err) => console.error('Error checking out', err)
+          error: (err: any) => {
+            this.serverError = err.error?.message || 'Error checking out.';
+          }
         });
       }
     } else {
-      this.api.checkOut().subscribe({
+      this.api.checkOut().pipe(
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe({
         next: () => {
           alert('Checked out successfully!');
           this.loadData();
         },
-        error: (err) => alert(err.error?.message || 'Error checking out')
+        error: (err: any) => {
+          this.serverError = err.error?.message || 'Error checking out.';
+        }
       });
     }
   }
 
   generateTimesheet(record: any) {
+    this.serverError = '';
     const empId = record.employee?.employeeId;
     if (!empId) {
-      alert('Cannot generate report: Employee ID missing.');
+      this.serverError = 'Cannot generate report: Employee ID missing.';
       return;
     }
-    this.api.downloadTimesheetPdf(empId).subscribe({
+    this.api.downloadTimesheetPdf(empId).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
       next: (blob: Blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -152,7 +199,35 @@ export class AttendanceComponent implements OnInit {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
       },
-      error: (err) => alert('Error generating PDF report.')
+      error: (err: any) => {
+        this.serverError = err.error?.message || 'Error generating PDF report.';
+      }
+    });
+  }
+
+  exportExcel() {
+    this.exportingExcel = true;
+    this.api.exportAttendanceExcel(undefined, this.currentMonth, this.currentYear).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (blob) => {
+        this.api.downloadBlob(blob, `Attendance_${this.currentMonth}_${this.currentYear}.xlsx`);
+        this.exportingExcel = false;
+      },
+      error: () => { this.exportingExcel = false; alert('Failed to export Excel.'); }
+    });
+  }
+
+  exportPdf() {
+    this.exportingPdf = true;
+    this.api.exportAttendancePdf(undefined, this.currentMonth, this.currentYear).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (blob) => {
+        this.api.downloadBlob(blob, `Attendance_${this.currentMonth}_${this.currentYear}.pdf`);
+        this.exportingPdf = false;
+      },
+      error: () => { this.exportingPdf = false; alert('Failed to export PDF.'); }
     });
   }
 }

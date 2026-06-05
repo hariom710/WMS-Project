@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using WMS.API.Data;
+using WMS.Infrastructure.Data;
 
 #nullable disable
 
@@ -22,7 +22,66 @@ namespace WMS.API.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("WMS.API.Models.Attendance", b =>
+            modelBuilder.Entity("WMS.Domain.Models.Announcement", b =>
+                {
+                    b.Property<int>("AnnouncementId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AnnouncementId"));
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("CreatedByEmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("AnnouncementId");
+
+                    b.HasIndex("CreatedByEmployeeId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.ToTable("Announcements");
+                });
+
+            modelBuilder.Entity("WMS.Domain.Models.Attendance", b =>
                 {
                     b.Property<int>("AttendanceId")
                         .ValueGeneratedOnAdd()
@@ -52,12 +111,16 @@ namespace WMS.API.Migrations
 
                     b.HasKey("AttendanceId");
 
+                    b.HasIndex("AttendanceDate");
+
                     b.HasIndex("EmpId");
+
+                    b.HasIndex("EmpId", "AttendanceDate");
 
                     b.ToTable("Attendances");
                 });
 
-            modelBuilder.Entity("WMS.API.Models.AuditLog", b =>
+            modelBuilder.Entity("WMS.Domain.Models.AuditLog", b =>
                 {
                     b.Property<int>("AuditId")
                         .ValueGeneratedOnAdd()
@@ -70,25 +133,116 @@ namespace WMS.API.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<int>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedOn")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("EntityName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("RecordId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserRole")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.HasKey("AuditId");
+
+                    b.HasIndex("Action");
+
+                    b.HasIndex("EntityName");
+
+                    b.HasIndex("RecordId");
+
+                    b.HasIndex("Timestamp");
+
+                    b.HasIndex("Username");
+
+                    b.HasIndex("EntityName", "Action");
+
+                    b.HasIndex("Username", "Timestamp");
 
                     b.ToTable("AuditLogs");
                 });
 
-            modelBuilder.Entity("WMS.API.Models.Department", b =>
+            modelBuilder.Entity("WMS.Domain.Models.Client", b =>
+                {
+                    b.Property<int>("ClientId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ClientId"));
+
+                    b.Property<string>("ClientAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClientLocation")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ClientName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ClientPhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Status")
+                        .HasColumnType("bit");
+
+                    b.HasKey("ClientId");
+
+                    b.HasIndex("ClientName");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.ToTable("Clients");
+                });
+
+            modelBuilder.Entity("WMS.Domain.Models.Department", b =>
                 {
                     b.Property<int>("DepartmentId")
                         .ValueGeneratedOnAdd()
@@ -96,7 +250,18 @@ namespace WMS.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DepartmentId"));
 
-                    b.Property<DateTime>("CreatedOn")
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DeletedDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DepartmentName")
@@ -106,15 +271,27 @@ namespace WMS.API.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("DepartmentId");
+
+                    b.HasIndex("IsDeleted");
 
                     b.ToTable("Departments");
                 });
 
-            modelBuilder.Entity("WMS.API.Models.Employee", b =>
+            modelBuilder.Entity("WMS.Domain.Models.Employee", b =>
                 {
                     b.Property<int>("EmployeeId")
                         .ValueGeneratedOnAdd()
@@ -122,13 +299,24 @@ namespace WMS.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EmployeeId"));
 
-                    b.Property<DateTime>("CreatedOn")
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DateOfJoining")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DeletedDate")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("DepartmentId")
@@ -145,19 +333,27 @@ namespace WMS.API.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Gender")
-                        .IsRequired()
                         .HasMaxLength(1)
                         .HasColumnType("nvarchar(1)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("nvarchar(15)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
@@ -167,9 +363,6 @@ namespace WMS.API.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<DateTime?>("UpdatedOn")
-                        .HasColumnType("datetime2");
-
                     b.HasKey("EmployeeId");
 
                     b.HasIndex("DepartmentId");
@@ -177,12 +370,226 @@ namespace WMS.API.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("LastName");
+
+                    b.HasIndex("PhoneNumber");
+
                     b.HasIndex("RoleId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("Employees");
                 });
 
-            modelBuilder.Entity("WMS.API.Models.Role", b =>
+            modelBuilder.Entity("WMS.Domain.Models.Leave", b =>
+                {
+                    b.Property<int>("LeaveId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LeaveId"));
+
+                    b.Property<int?>("ApprovedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ApprovedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EmpId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FromDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LeaveType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("ToDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("LeaveId");
+
+                    b.HasIndex("EmpId");
+
+                    b.HasIndex("FromDate");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("EmpId", "Status");
+
+                    b.ToTable("Leaves");
+                });
+
+            modelBuilder.Entity("WMS.Domain.Models.Project", b =>
+                {
+                    b.Property<int>("ProjectId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProjectId"));
+
+                    b.Property<int?>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EndDate")
+                        .IsRequired()
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("StartDate")
+                        .IsRequired()
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("ProjectId");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Status", "ClientId");
+
+                    b.ToTable("Projects");
+                });
+
+            modelBuilder.Entity("WMS.Domain.Models.ProjectAllocation", b =>
+                {
+                    b.Property<int>("AllocationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AllocationId"));
+
+                    b.Property<DateTime>("AssignedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EmpId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Status")
+                        .HasColumnType("bit");
+
+                    b.HasKey("AllocationId");
+
+                    b.HasIndex("EmpId");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("EmpId", "ProjectId");
+
+                    b.HasIndex("ProjectId", "Status");
+
+                    b.ToTable("ProjectAllocations");
+                });
+
+            modelBuilder.Entity("WMS.Domain.Models.Role", b =>
                 {
                     b.Property<int>("RoleId")
                         .ValueGeneratedOnAdd()
@@ -205,7 +612,7 @@ namespace WMS.API.Migrations
                     b.ToTable("Roles");
                 });
 
-            modelBuilder.Entity("WMS.API.Models.UserLogin", b =>
+            modelBuilder.Entity("WMS.Domain.Models.UserLogin", b =>
                 {
                     b.Property<int>("UserId")
                         .ValueGeneratedOnAdd()
@@ -240,186 +647,18 @@ namespace WMS.API.Migrations
 
             modelBuilder.Entity("WMS.Domain.Models.Announcement", b =>
                 {
-                    b.Property<int>("AnnouncementId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                    b.HasOne("WMS.Domain.Models.Employee", "CreatedByEmployee")
+                        .WithMany()
+                        .HasForeignKey("CreatedByEmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AnnouncementId"));
-
-                    b.Property<int>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("AnnouncementId");
-
-                    b.ToTable("Announcements");
+                    b.Navigation("CreatedByEmployee");
                 });
 
-            modelBuilder.Entity("WMS.Domain.Models.Client", b =>
+            modelBuilder.Entity("WMS.Domain.Models.Attendance", b =>
                 {
-                    b.Property<int>("ClientId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ClientId"));
-
-                    b.Property<string>("ClientAddress")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ClientLocation")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("ClientName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ClientPhoneNumber")
-                        .HasMaxLength(15)
-                        .HasColumnType("nvarchar(15)");
-
-                    b.Property<bool>("Status")
-                        .HasColumnType("bit");
-
-                    b.HasKey("ClientId");
-
-                    b.ToTable("Clients");
-                });
-
-            modelBuilder.Entity("WMS.Domain.Models.Leave", b =>
-                {
-                    b.Property<int>("LeaveId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LeaveId"));
-
-                    b.Property<DateTime>("AppliedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ApprovedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ApprovedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("EmpId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("FromDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("LeaveType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ToDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("LeaveId");
-
-                    b.HasIndex("EmpId");
-
-                    b.ToTable("Leaves");
-                });
-
-            modelBuilder.Entity("WMS.Domain.Models.Project", b =>
-                {
-                    b.Property<int>("ProjectId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProjectId"));
-
-                    b.Property<int?>("ClientId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ProjectName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("ProjectId");
-
-                    b.ToTable("Projects");
-                });
-
-            modelBuilder.Entity("WMS.Domain.Models.ProjectAllocation", b =>
-                {
-                    b.Property<int>("AllocationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AllocationId"));
-
-                    b.Property<DateTime>("AssignedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreateDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("EmpId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Status")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("AllocationId");
-
-                    b.HasIndex("EmpId");
-
-                    b.HasIndex("ProjectId");
-
-                    b.ToTable("ProjectAllocations");
-                });
-
-            modelBuilder.Entity("WMS.API.Models.Attendance", b =>
-                {
-                    b.HasOne("WMS.API.Models.Employee", "Employee")
+                    b.HasOne("WMS.Domain.Models.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmpId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -428,15 +667,15 @@ namespace WMS.API.Migrations
                     b.Navigation("Employee");
                 });
 
-            modelBuilder.Entity("WMS.API.Models.Employee", b =>
+            modelBuilder.Entity("WMS.Domain.Models.Employee", b =>
                 {
-                    b.HasOne("WMS.API.Models.Department", "Department")
+                    b.HasOne("WMS.Domain.Models.Department", "Department")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("WMS.API.Models.Role", "Role")
+                    b.HasOne("WMS.Domain.Models.Role", "Role")
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -447,20 +686,9 @@ namespace WMS.API.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("WMS.API.Models.UserLogin", b =>
-                {
-                    b.HasOne("WMS.API.Models.Role", "Role")
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Role");
-                });
-
             modelBuilder.Entity("WMS.Domain.Models.Leave", b =>
                 {
-                    b.HasOne("WMS.API.Models.Employee", "Employee")
+                    b.HasOne("WMS.Domain.Models.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmpId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -469,9 +697,18 @@ namespace WMS.API.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("WMS.Domain.Models.Project", b =>
+                {
+                    b.HasOne("WMS.Domain.Models.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId");
+
+                    b.Navigation("Client");
+                });
+
             modelBuilder.Entity("WMS.Domain.Models.ProjectAllocation", b =>
                 {
-                    b.HasOne("WMS.API.Models.Employee", "Employee")
+                    b.HasOne("WMS.Domain.Models.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmpId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -486,6 +723,17 @@ namespace WMS.API.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("WMS.Domain.Models.UserLogin", b =>
+                {
+                    b.HasOne("WMS.Domain.Models.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Role");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,23 +1,28 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, DestroyRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../auth'; 
+import { AuthService } from '../auth';
 import { HttpClient } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './login.html' 
+  templateUrl: './login.html',
+  styleUrls: ['./login.css']
 })
-export class LoginComponent {
+export class LoginComponent implements OnDestroy {
+  private destroyRef = inject(DestroyRef);
+
   loginForm: FormGroup;
   errorMessage: string = '';
   setupMessage: string = '';
 
   constructor(
-    private fb: FormBuilder, 
+    private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
     private http: HttpClient
@@ -28,8 +33,12 @@ export class LoginComponent {
     });
   }
 
+  ngOnDestroy(): void {}
+
   setupAdmin() {
-    this.http.post('https://hariomwmsapi8501.azurewebsites.net/api/Auth/setup-default-admin', {}).subscribe({
+    this.http.post(`${environment.apiUrl}/Auth/setup-default-admin`, {}).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
       next: (res: any) => {
         this.setupMessage = res.message;
       },
@@ -41,9 +50,11 @@ export class LoginComponent {
 
   onSubmit() {
     if (this.loginForm.valid) {
-      this.authService.login(this.loginForm.value).subscribe({
+      this.authService.login(this.loginForm.value).pipe(
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe({
         next: () => {
-          this.router.navigate(['/dashboard']); 
+          this.router.navigate(['/dashboard']);
         },
         error: (err) => {
           this.errorMessage = 'Invalid Username or Password';
