@@ -1,28 +1,54 @@
-```gitignore
-# Build folders
-bin/
-obj/
+## Build output
 publish/
+publish_api/
+api.zip
+backend.zip
+frontend.zip
 
-# Angular
+## .NET
+*.dll
+*.exe
+*.pdb
+*.cache
+*.nupkg
+*.snupkg
+project.nuget.cache
+.vs/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+bld/
+[Oo]bj/
+[Bb]in/
+
+## NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+
+## Rider / VS
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Node
 node_modules/
 dist/
+.angular/
+.browserlistrc
 
-# Visual Studio
-.vs/
-*.user
-*.suo
-
-# Logs
-*.log
-
-# OS files
-Thumbs.db
+## OS
 .DS_Store
+Thumbs.db
+desktop.ini
 
-# Environment files
-.env
+## Logs
+*.log
+npm-debug.log*
 
-# Azure
+## Environment
 appsettings.Development.json
-```
+.env
+.env.local
