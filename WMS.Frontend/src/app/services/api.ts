@@ -1,8 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, retry, throwError } from 'rxjs';
+import { Observable, catchError, retry, throwError, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Employee, Department, Role, Attendance, Leave, Project, Allocation, Client, Announcement, DashboardSummary } from '../models';
+
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  paginationInfo?: any;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -17,12 +24,17 @@ export class ApiService {
     return throwError(() => error);
   }
 
+  private extractData<T>(response: ApiResponse<T>): T {
+    return response.data;
+  }
+
   // ==========================
   // EMPLOYEES
   // ==========================
   getEmployees(): Observable<Employee[]> {
-    return this.http.get<Employee[]>(`${this.baseUrl}/Employees`).pipe(
+    return this.http.get<ApiResponse<Employee[]>>(`${this.baseUrl}/Employees`).pipe(
       retry(1),
+      map(res => this.extractData<Employee[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -43,8 +55,9 @@ export class ApiService {
   // DEPARTMENTS
   // ==========================
   getDepartments(): Observable<Department[]> {
-    return this.http.get<Department[]>(`${this.baseUrl}/Departments`).pipe(
+    return this.http.get<ApiResponse<Department[]>>(`${this.baseUrl}/Departments`).pipe(
       retry(1),
+      map(res => this.extractData<Department[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -71,8 +84,9 @@ export class ApiService {
   // ROLES
   // ==========================
   getRoles(): Observable<Role[]> {
-    return this.http.get<Role[]>(`${this.baseUrl}/Roles`).pipe(
+    return this.http.get<ApiResponse<Role[]>>(`${this.baseUrl}/Roles`).pipe(
       retry(1),
+      map(res => this.extractData<Role[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -81,15 +95,17 @@ export class ApiService {
   // ATTENDANCE
   // ==========================
   getAttendances(): Observable<Attendance[]> {
-    return this.http.get<Attendance[]>(`${this.baseUrl}/Attendance`).pipe(
+    return this.http.get<ApiResponse<Attendance[]>>(`${this.baseUrl}/Attendance`).pipe(
       retry(1),
+      map(res => this.extractData<Attendance[]>(res)),
       catchError(this.handleError)
     );
   }
 
   getMonthlyAttendance(month: number, year: number): Observable<Attendance[]> {
-    return this.http.get<Attendance[]>(`${this.baseUrl}/Attendance/monthly?month=${month}&year=${year}`).pipe(
+    return this.http.get<ApiResponse<Attendance[]>>(`${this.baseUrl}/Attendance/monthly?month=${month}&year=${year}`).pipe(
       retry(1),
+      map(res => this.extractData<Attendance[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -123,8 +139,9 @@ export class ApiService {
 
   // --- Self-Service Methods ---
   getMyAttendance(): Observable<Attendance[]> {
-    return this.http.get<Attendance[]>(`${this.baseUrl}/Attendance/my-attendance`).pipe(
+    return this.http.get<ApiResponse<Attendance[]>>(`${this.baseUrl}/Attendance/my-attendance`).pipe(
       retry(1),
+      map(res => this.extractData<Attendance[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -147,8 +164,9 @@ export class ApiService {
   // PROJECTS
   // ==========================
   getProjects(): Observable<Project[]> {
-    return this.http.get<Project[]>(`${this.baseUrl}/Projects`).pipe(
+    return this.http.get<ApiResponse<Project[]>>(`${this.baseUrl}/Projects`).pipe(
       retry(1),
+      map(res => this.extractData<Project[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -175,8 +193,9 @@ export class ApiService {
   // PROJECT ALLOCATIONS
   // ==========================
   getAllocations(): Observable<Allocation[]> {
-    return this.http.get<Allocation[]>(`${this.baseUrl}/Allocations`).pipe(
+    return this.http.get<ApiResponse<Allocation[]>>(`${this.baseUrl}/Allocations`).pipe(
       retry(1),
+      map(res => this.extractData<Allocation[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -197,15 +216,17 @@ export class ApiService {
   // LEAVES
   // ==========================
   getLeaves(): Observable<Leave[]> {
-    return this.http.get<Leave[]>(`${this.baseUrl}/Leaves`).pipe(
+    return this.http.get<ApiResponse<Leave[]>>(`${this.baseUrl}/Leaves`).pipe(
       retry(1),
+      map(res => this.extractData<Leave[]>(res)),
       catchError(this.handleError)
     );
   }
 
   getPendingLeaves(): Observable<Leave[]> {
-    return this.http.get<Leave[]>(`${this.baseUrl}/Leaves/pending`).pipe(
+    return this.http.get<ApiResponse<Leave[]>>(`${this.baseUrl}/Leaves/pending`).pipe(
       retry(1),
+      map(res => this.extractData<Leave[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -238,8 +259,9 @@ export class ApiService {
   // ANNOUNCEMENTS
   // ==========================
   getAlerts(): Observable<Announcement[]> {
-    return this.http.get<Announcement[]>(`${this.baseUrl}/Announcements`).pipe(
+    return this.http.get<ApiResponse<Announcement[]>>(`${this.baseUrl}/Announcements`).pipe(
       retry(1),
+      map(res => this.extractData<Announcement[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -266,8 +288,9 @@ export class ApiService {
   // CLIENTS
   // ==========================
   getClients(): Observable<Client[]> {
-    return this.http.get<Client[]>(`${this.baseUrl}/Clients`).pipe(
+    return this.http.get<ApiResponse<Client[]>>(`${this.baseUrl}/Clients`).pipe(
       retry(1),
+      map(res => this.extractData<Client[]>(res)),
       catchError(this.handleError)
     );
   }
@@ -294,8 +317,9 @@ export class ApiService {
   // DASHBOARD
   // ==========================
   getDashboardSummary(): Observable<DashboardSummary> {
-    return this.http.get<DashboardSummary>(`${this.baseUrl}/Dashboard/summary`).pipe(
+    return this.http.get<ApiResponse<DashboardSummary>>(`${this.baseUrl}/Dashboard/summary`).pipe(
       retry(1),
+      map(res => this.extractData<DashboardSummary>(res)),
       catchError(this.handleError)
     );
   }
