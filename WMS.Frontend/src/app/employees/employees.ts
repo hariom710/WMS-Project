@@ -108,8 +108,8 @@ export class EmployeesComponent implements OnInit, OnDestroy {
         data.firstName,
         data.lastName,
         data.email,
-        data.department?.departmentName,
-        data.role?.roleName
+        data.departmentName,
+        data.roleName
       ].join(' ').toLowerCase();
       return dataStr.includes(filter);
     };

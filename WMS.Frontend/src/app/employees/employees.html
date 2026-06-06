@@ -170,8 +170,8 @@
               </div>
             </td>
             <td class="emp-email-cell">{{ emp.email }}</td>
-            <td><span class="badge badge-primary">{{ emp.department?.departmentName || 'N/A' }}</span></td>
-            <td><span class="badge badge-secondary">{{ emp.role?.roleName || 'N/A' }}</span></td>
+            <td><span class="badge badge-primary">{{ emp.departmentName || 'N/A' }}</span></td>
+            <td><span class="badge badge-secondary">{{ emp.roleName || 'N/A' }}</span></td>
             <td>
               <span class="badge" [ngClass]="emp.status === 'Active' ? 'badge-success' : 'badge-danger'">
                 <span class="badge-dot"></span>{{ emp.status }}

@@ -25,7 +25,7 @@
             <select class="form-select" formControlName="empId">
               <option [ngValue]="null" disabled>Choose Employee</option>
               <option *ngFor="let emp of employees; trackBy: trackByEmployeeId" [value]="emp.employeeId">
-                {{ emp.firstName }} {{ emp.lastName }} — {{ emp.role?.roleName || 'No Role' }}
+                {{ emp.firstName }} {{ emp.lastName }} — {{ emp.roleName || 'No Role' }}
               </option>
             </select>
             <div *ngIf="f['empId'].touched && f['empId'].invalid" class="form-error">Employee is required.</div>

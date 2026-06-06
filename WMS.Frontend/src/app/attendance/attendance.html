@@ -32,7 +32,7 @@
           <select class="form-select" [(ngModel)]="newAttendance.empId">
             <option [ngValue]="null" disabled>Choose employee to clock in...</option>
             <option *ngFor="let emp of employees; trackBy: trackByEmployeeId" [value]="emp.employeeId">
-              {{ emp.firstName }} {{ emp.lastName }} — {{ emp.department?.departmentName || 'No Dept' }}
+              {{ emp.firstName }} {{ emp.lastName }} — {{ emp.departmentName || 'No Dept' }}
             </option>
           </select>
         </div>
