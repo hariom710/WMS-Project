@@ -21,8 +21,22 @@ namespace WMS.API.Controllers
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummary()
         {
-            var summary = await _dashboardService.GetSummaryAsync();
-            return Ok(ApiResponse<DashboardSummaryDto>.Ok(summary));
+            try
+            {
+                var summary = await _dashboardService.GetSummaryAsync();
+                return Ok(ApiResponse<DashboardSummaryDto>.Ok(summary));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    statusCode = 500,
+                    message = ex.Message,
+                    innerMessage = ex.InnerException?.Message,
+                    innerInnerMessage = ex.InnerException?.InnerException?.Message,
+                    stackTrace = ex.StackTrace?.Substring(0, Math.Min(500, ex.StackTrace?.Length ?? 0))
+                });
+            }
         }
     }
 }

@@ -79,16 +79,18 @@ namespace WMS.Infrastructure.Services
                 ? Math.Round((double)presentToday / activeEmpCount * 100, 1)
                 : 0;
 
-            var monthlyTrend = await _context.Attendances
+            var monthlyTrend = (await _context.Attendances
                 .Where(a => a.AttendanceDate >= today.AddMonths(-5).AddDays(-today.Day + 1))
                 .GroupBy(a => new { a.AttendanceDate.Year, a.AttendanceDate.Month })
+                .Select(g => new { g.Key.Month, g.Key.Year, Count = g.Count() })
+                .OrderBy(t => t.Year).ThenBy(t => t.Month)
+                .ToListAsync())
                 .Select(g => new MonthlyTrendDto
                 {
-                    Month = $"{g.Key.Month:D2}/{g.Key.Year}",
-                    Count = g.Count()
+                    Month = $"{g.Month:D2}/{g.Year}",
+                    Count = g.Count
                 })
-                .OrderBy(t => t.Month)
-                .ToListAsync();
+                .ToList();
 
             return new AttendanceAnalyticsDto
             {
@@ -106,16 +108,18 @@ namespace WMS.Infrastructure.Services
             var rejectedCount = await _context.Leaves.CountAsync(l => l.Status == "Rejected");
 
             var sixMonthsAgo = DateTime.Today.AddMonths(-5).AddDays(-DateTime.Today.Day + 1);
-            var monthlyTrend = await _context.Leaves
+            var monthlyTrend = (await _context.Leaves
                 .Where(l => l.CreatedDate >= sixMonthsAgo)
                 .GroupBy(l => new { l.CreatedDate.Year, l.CreatedDate.Month })
+                .Select(g => new { g.Key.Month, g.Key.Year, Count = g.Count() })
+                .OrderBy(t => t.Year).ThenBy(t => t.Month)
+                .ToListAsync())
                 .Select(g => new MonthlyTrendDto
                 {
-                    Month = $"{g.Key.Month:D2}/{g.Key.Year}",
-                    Count = g.Count()
+                    Month = $"{g.Month:D2}/{g.Year}",
+                    Count = g.Count
                 })
-                .OrderBy(t => t.Month)
-                .ToListAsync();
+                .ToList();
 
             return new LeaveAnalyticsDto
             {
@@ -152,14 +156,15 @@ namespace WMS.Infrastructure.Services
 
         private async Task<DepartmentAnalyticsDto> GetDepartmentAnalyticsAsync()
         {
-            var employeeCounts = await _context.Departments
-                .Select(d => new DepartmentCountDto
-                {
-                    DepartmentName = d.DepartmentName,
-                    EmployeeCount = _context.Employees.Count(e => e.DepartmentId == d.DepartmentId)
-                })
-                .OrderByDescending(d => d.EmployeeCount)
-                .ToListAsync();
+            var departments = await _context.Departments.ToListAsync();
+
+            var employeeCounts = departments.Select(d => new DepartmentCountDto
+            {
+                DepartmentName = d.DepartmentName,
+                EmployeeCount = _context.Employees.Count(e => e.DepartmentId == d.DepartmentId)
+            })
+            .OrderByDescending(d => d.EmployeeCount)
+            .ToList();
 
             return new DepartmentAnalyticsDto { EmployeeCounts = employeeCounts };
         }
