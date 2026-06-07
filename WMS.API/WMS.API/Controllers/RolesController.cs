@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WMS.API.Helpers;
 using WMS.Domain.Interfaces;
 using WMS.Domain.Models;
 using AutoMapper;
@@ -24,7 +25,7 @@ namespace WMS.API.Controllers
         public async Task<IActionResult> GetRoles()
         {
             var roles = await _roleService.GetAllAsync();
-            return Ok(roles);
+            return Ok(ApiResponse<List<Role>>.Ok(roles));
         }
 
         [HttpPost]

@@ -24,8 +24,11 @@ export class ApiService {
     return throwError(() => error);
   }
 
-  private extractData<T>(response: ApiResponse<T>): T {
-    return response.data;
+  private extractData<T>(response: any): T {
+    if (response && response.data !== undefined) {
+      return response.data;
+    }
+    return response as T;
   }
 
   // ==========================
