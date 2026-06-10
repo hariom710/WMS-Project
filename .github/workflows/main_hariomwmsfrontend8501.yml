@@ -33,7 +33,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend
-          path: ./WMS.Frontend/dist/WMS-Frontend
+          path: ./WMS.Frontend/dist/WMS-Frontend/browser
 
   deploy:
     runs-on: ubuntu-latest
