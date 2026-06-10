@@ -16,6 +16,7 @@ namespace WMS.Infrastructure.Repositories
             string? sortBy, string? sortDirection, int page, int pageSize)
         {
             var query = _context.Employees
+                .AsNoTracking()
                 .Include(e => e.Department)
                 .Include(e => e.Role)
                 .AsQueryable();
@@ -28,6 +29,7 @@ namespace WMS.Infrastructure.Repositories
             string? search, string? sortBy, string? sortDirection, int page, int pageSize)
         {
             var query = _context.Employees
+                .AsNoTracking()
                 .IgnoreQueryFilters()
                 .Include(e => e.Department)
                 .Include(e => e.Role)

@@ -38,31 +38,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadDashboard(): void {
+    console.time('[Dashboard] API Response');
     this.api.getDashboardSummary().pipe(
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (data) => {
+        console.timeEnd('[Dashboard] API Response');
         this.summary = data;
         this.loading = false;
         setTimeout(() => this.buildCharts(), 0);
       },
       error: () => {
+        console.timeEnd('[Dashboard] API Response');
         this.loading = false;
       }
     });
   }
 
   private buildCharts(): void {
+    console.time('[Dashboard] Charts Render');
     this.charts.forEach(c => c.destroy());
     this.charts = [];
 
-    if (!this.summary) return;
+    if (!this.summary) {
+      console.timeEnd('[Dashboard] Charts Render');
+      return;
+    }
 
     this.buildAttendanceChart();
     this.buildLeaveChart();
     this.buildProjectChart();
     this.buildDepartmentChart();
     this.buildLeaveTrendChart();
+    console.timeEnd('[Dashboard] Charts Render');
   }
 
   private buildAttendanceChart(): void {
@@ -91,6 +99,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
         plugins: { legend: { display: false } },
         scales: {
           y: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { color: '#94A3B8' } },
@@ -117,6 +126,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
         cutout: '65%',
         plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } } }
       }
@@ -151,6 +161,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
         plugins: { legend: { display: false } },
         scales: {
           y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94A3B8' }, grid: { color: '#F1F5F9' } },
@@ -182,6 +193,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
         plugins: { legend: { display: false } },
         scales: {
           x: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { color: '#94A3B8', stepSize: 1 } },
@@ -212,6 +224,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
         plugins: { legend: { display: false } },
         scales: {
           y: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { color: '#94A3B8', stepSize: 1 } },

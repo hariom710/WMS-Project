@@ -16,6 +16,7 @@ namespace WMS.Infrastructure.Repositories
             string? sortBy, string? sortDirection, int page, int pageSize)
         {
             var query = _context.Attendances
+                .AsNoTracking()
                 .Include(a => a.Employee)
                 .AsQueryable();
 

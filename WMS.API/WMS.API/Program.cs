@@ -20,13 +20,11 @@ if (builder.Environment.IsDevelopment())
 }
 
 // Build the connection string from environment/User Secrets with fallback
-var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? Environment.GetEnvironmentVariable("WMS_CONNECTION_STRING")
-    ?? "";
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connStr)) connStr = Environment.GetEnvironmentVariable("WMS_CONNECTION_STRING") ?? "";
 
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? Environment.GetEnvironmentVariable("WMS_JWT_KEY")
-    ?? "";
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrEmpty(jwtKey)) jwtKey = Environment.GetEnvironmentVariable("WMS_JWT_KEY") ?? "";
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "WMS_API";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "WMS_Frontend";
@@ -54,6 +52,11 @@ builder.Services.AddCors(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        var effectiveKey = jwtKey;
+        if (string.IsNullOrEmpty(effectiveKey))
+        {
+            effectiveKey = builder.Configuration["Jwt:Key"] ?? Environment.GetEnvironmentVariable("WMS_JWT_KEY") ?? "";
+        }
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -64,13 +67,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtKey))
+                Encoding.UTF8.GetBytes(string.IsNullOrEmpty(effectiveKey) ? "PLACEHOLDER_KEY_MIN_32_CHARS_LONG!" : effectiveKey))
         };
     });
 
 // ── Current User ──
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddSingleton<AuditLogChannel>();
+builder.Services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, AuditLogWorker>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 
 // ── Repositories ──
@@ -112,11 +117,14 @@ var app = builder.Build();
 
 app.UseCustomExceptionHandler();
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+if (app.Environment.IsDevelopment())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "WMS API V1");
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "WMS API V1");
+    });
+}
 
 if (!app.Environment.IsDevelopment())
 {

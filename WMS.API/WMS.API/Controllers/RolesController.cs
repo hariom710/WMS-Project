@@ -24,7 +24,7 @@ namespace WMS.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetRoles()
         {
-            var roles = await _roleService.GetAllAsync();
+            var roles = (await _roleService.GetAllAsync()).ToList();
             return Ok(ApiResponse<List<Role>>.Ok(roles));
         }
 

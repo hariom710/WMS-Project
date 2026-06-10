@@ -34,6 +34,13 @@ namespace WMS.Infrastructure.Services
                 return (false, "ToDate must be after FromDate.");
 
             var employee = await _employeeRepo.GetByEmailAsync(userEmail);
+
+            if (employee == null && leave.EmpId > 0)
+            {
+                var empById = await _employeeRepo.GetByIdAsync(leave.EmpId);
+                if (empById != null) employee = empById;
+            }
+
             if (employee == null) return (false, "Employee not found.");
 
             if (await _leaveRepo.HasOverlappingLeaveAsync(employee.EmployeeId, leave.FromDate, leave.ToDate))

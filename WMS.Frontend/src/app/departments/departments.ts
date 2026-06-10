@@ -89,6 +89,7 @@ export class DepartmentsComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: (res) => {
           alert(res.message);
+          this.api.invalidateDepartmentCache();
           this.loadDepartments();
         },
         error: (err) => alert(err.error?.message || 'Failed to delete department.')
@@ -113,6 +114,7 @@ export class DepartmentsComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: () => {
           alert('Department updated successfully!');
+          this.api.invalidateDepartmentCache();
           this.cancelEdit();
           this.loadDepartments();
         },
@@ -127,6 +129,7 @@ export class DepartmentsComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: () => {
           alert('Department successfully created!');
+          this.api.invalidateDepartmentCache();
           this.departmentForm.reset();
           this.loadDepartments();
         },

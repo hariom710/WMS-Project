@@ -16,6 +16,7 @@ namespace WMS.Infrastructure.Repositories
             string? sortBy, string? sortDirection, int page, int pageSize)
         {
             var query = _context.Announcements
+                .AsNoTracking()
                 .Include(a => a.CreatedByEmployee)
                 .AsQueryable();
 
@@ -48,7 +49,7 @@ namespace WMS.Infrastructure.Repositories
         public async Task<PagedResult<Announcement>> GetDeletedAsync(
             string? search, string? sortBy, string? sortDirection, int page, int pageSize)
         {
-            var query = _context.Announcements.IgnoreQueryFilters()
+            var query = _context.Announcements.AsNoTracking().IgnoreQueryFilters()
                 .Include(a => a.CreatedByEmployee)
                 .Where(a => a.IsDeleted)
                 .AsQueryable();

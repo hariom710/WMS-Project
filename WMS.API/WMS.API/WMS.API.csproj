@@ -31,4 +31,8 @@
     <ProjectReference Include="..\WMS.Infrastructure\WMS.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="WMS.Tests" />
+  </ItemGroup>
+
 </Project>

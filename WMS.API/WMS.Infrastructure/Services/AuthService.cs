@@ -37,11 +37,9 @@ namespace WMS.Infrastructure.Services
                 return (false, null, null, null, null);
             }
 
-            user.LastLogin = DateTime.Now;
-            await _context.SaveChangesAsync();
-
             var roleName = user.Role?.RoleName ?? "Employee";
-            var jwtKey = _configuration["Jwt:Key"] ?? Environment.GetEnvironmentVariable("WMS_JWT_KEY") ?? "";
+            var jwtKey = _configuration["Jwt:Key"] ?? "";
+            if (string.IsNullOrEmpty(jwtKey)) jwtKey = Environment.GetEnvironmentVariable("WMS_JWT_KEY") ?? "";
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
             var claims = new[]

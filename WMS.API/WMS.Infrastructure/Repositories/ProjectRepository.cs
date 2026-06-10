@@ -15,7 +15,7 @@ namespace WMS.Infrastructure.Repositories
             string? search, string? status, int? clientId,
             string? sortBy, string? sortDirection, int page, int pageSize)
         {
-            var query = _context.Projects.Include(p => p.Client).AsQueryable();
+            var query = _context.Projects.AsNoTracking().Include(p => p.Client).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(p => p.ProjectName.ToLower().Contains(search.ToLower()));
@@ -49,7 +49,7 @@ namespace WMS.Infrastructure.Repositories
         public async Task<PagedResult<Project>> GetDeletedAsync(
             string? search, string? sortBy, string? sortDirection, int page, int pageSize)
         {
-            var query = _context.Projects.IgnoreQueryFilters().Include(p => p.Client).Where(p => p.IsDeleted).AsQueryable();
+            var query = _context.Projects.AsNoTracking().IgnoreQueryFilters().Include(p => p.Client).Where(p => p.IsDeleted).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(p => p.ProjectName.ToLower().Contains(search.ToLower()));

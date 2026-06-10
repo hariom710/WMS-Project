@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, retry, throwError, map } from 'rxjs';
+import { Observable, catchError, retry, throwError, map, shareReplay } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Employee, Department, Role, Attendance, Leave, Project, Allocation, Client, Announcement, DashboardSummary } from '../models';
 
@@ -16,8 +16,13 @@ interface ApiResponse<T> {
 })
 export class ApiService {
   private baseUrl = environment.apiUrl;
+  private departmentsCache$: Observable<Department[]> | null = null;
+  private rolesCache$: Observable<Role[]> | null = null;
 
   constructor(private http: HttpClient) { }
+
+  invalidateDepartmentCache() { this.departmentsCache$ = null; }
+  invalidateRoleCache() { this.rolesCache$ = null; }
 
   private handleError(error: any) {
     console.error('API Error:', error);
@@ -31,15 +36,23 @@ export class ApiService {
     return response as T;
   }
 
+  private timedGet<T>(url: string, label: string): Observable<T> {
+    const start = performance.now();
+    return this.http.get<ApiResponse<T>>(url).pipe(
+      retry(1),
+      map(res => {
+        console.log(`[PERF] ${label}: ${Math.round(performance.now() - start)}ms`);
+        return this.extractData<T>(res);
+      }),
+      catchError(this.handleError)
+    );
+  }
+
   // ==========================
   // EMPLOYEES
   // ==========================
   getEmployees(): Observable<Employee[]> {
-    return this.http.get<ApiResponse<Employee[]>>(`${this.baseUrl}/Employees`).pipe(
-      retry(1),
-      map(res => this.extractData<Employee[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Employee[]>(`${this.baseUrl}/Employees`, 'Employees API');
   }
 
   addEmployee(employee: Partial<Employee>): Observable<any> {
@@ -58,11 +71,12 @@ export class ApiService {
   // DEPARTMENTS
   // ==========================
   getDepartments(): Observable<Department[]> {
-    return this.http.get<ApiResponse<Department[]>>(`${this.baseUrl}/Departments`).pipe(
-      retry(1),
-      map(res => this.extractData<Department[]>(res)),
-      catchError(this.handleError)
-    );
+    if (!this.departmentsCache$) {
+      this.departmentsCache$ = this.timedGet<Department[]>(`${this.baseUrl}/Departments`, 'Departments API').pipe(
+        shareReplay(1)
+      );
+    }
+    return this.departmentsCache$;
   }
 
   addDepartment(department: Partial<Department>): Observable<any> {
@@ -87,30 +101,23 @@ export class ApiService {
   // ROLES
   // ==========================
   getRoles(): Observable<Role[]> {
-    return this.http.get<ApiResponse<Role[]>>(`${this.baseUrl}/Roles`).pipe(
-      retry(1),
-      map(res => this.extractData<Role[]>(res)),
-      catchError(this.handleError)
-    );
+    if (!this.rolesCache$) {
+      this.rolesCache$ = this.timedGet<Role[]>(`${this.baseUrl}/Roles`, 'Roles API').pipe(
+        shareReplay(1)
+      );
+    }
+    return this.rolesCache$;
   }
 
   // ==========================
   // ATTENDANCE
   // ==========================
   getAttendances(): Observable<Attendance[]> {
-    return this.http.get<ApiResponse<Attendance[]>>(`${this.baseUrl}/Attendance`).pipe(
-      retry(1),
-      map(res => this.extractData<Attendance[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Attendance[]>(`${this.baseUrl}/Attendance`, 'Attendances API');
   }
 
   getMonthlyAttendance(month: number, year: number): Observable<Attendance[]> {
-    return this.http.get<ApiResponse<Attendance[]>>(`${this.baseUrl}/Attendance/monthly?month=${month}&year=${year}`).pipe(
-      retry(1),
-      map(res => this.extractData<Attendance[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Attendance[]>(`${this.baseUrl}/Attendance/monthly?month=${month}&year=${year}`, 'Monthly Attendance API');
   }
 
   addAttendance(attendance: Partial<Attendance>): Observable<any> {
@@ -142,11 +149,7 @@ export class ApiService {
 
   // --- Self-Service Methods ---
   getMyAttendance(): Observable<Attendance[]> {
-    return this.http.get<ApiResponse<Attendance[]>>(`${this.baseUrl}/Attendance/my-attendance`).pipe(
-      retry(1),
-      map(res => this.extractData<Attendance[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Attendance[]>(`${this.baseUrl}/Attendance/my-attendance`, 'My Attendance API');
   }
 
   checkIn(workMode: string): Observable<any> {
@@ -167,11 +170,7 @@ export class ApiService {
   // PROJECTS
   // ==========================
   getProjects(): Observable<Project[]> {
-    return this.http.get<ApiResponse<Project[]>>(`${this.baseUrl}/Projects`).pipe(
-      retry(1),
-      map(res => this.extractData<Project[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Project[]>(`${this.baseUrl}/Projects`, 'Projects API');
   }
 
   addProject(project: Partial<Project>): Observable<any> {
@@ -196,11 +195,7 @@ export class ApiService {
   // PROJECT ALLOCATIONS
   // ==========================
   getAllocations(): Observable<Allocation[]> {
-    return this.http.get<ApiResponse<Allocation[]>>(`${this.baseUrl}/Allocations`).pipe(
-      retry(1),
-      map(res => this.extractData<Allocation[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Allocation[]>(`${this.baseUrl}/Allocations`, 'Allocations API');
   }
 
   addAllocation(allocation: Partial<Allocation>): Observable<any> {
@@ -219,19 +214,11 @@ export class ApiService {
   // LEAVES
   // ==========================
   getLeaves(): Observable<Leave[]> {
-    return this.http.get<ApiResponse<Leave[]>>(`${this.baseUrl}/Leaves`).pipe(
-      retry(1),
-      map(res => this.extractData<Leave[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Leave[]>(`${this.baseUrl}/Leaves`, 'Leaves API');
   }
 
   getPendingLeaves(): Observable<Leave[]> {
-    return this.http.get<ApiResponse<Leave[]>>(`${this.baseUrl}/Leaves/pending`).pipe(
-      retry(1),
-      map(res => this.extractData<Leave[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Leave[]>(`${this.baseUrl}/Leaves/pending`, 'Pending Leaves API');
   }
 
   applyLeave(leave: Partial<Leave>): Observable<any> {
@@ -262,11 +249,7 @@ export class ApiService {
   // ANNOUNCEMENTS
   // ==========================
   getAlerts(): Observable<Announcement[]> {
-    return this.http.get<ApiResponse<Announcement[]>>(`${this.baseUrl}/Announcements`).pipe(
-      retry(1),
-      map(res => this.extractData<Announcement[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Announcement[]>(`${this.baseUrl}/Announcements`, 'Announcements API');
   }
 
   addAnnouncement(announcement: Partial<Announcement>): Observable<any> {
@@ -291,11 +274,7 @@ export class ApiService {
   // CLIENTS
   // ==========================
   getClients(): Observable<Client[]> {
-    return this.http.get<ApiResponse<Client[]>>(`${this.baseUrl}/Clients`).pipe(
-      retry(1),
-      map(res => this.extractData<Client[]>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<Client[]>(`${this.baseUrl}/Clients`, 'Clients API');
   }
 
   addClient(client: Partial<Client>): Observable<any> {
@@ -320,11 +299,7 @@ export class ApiService {
   // DASHBOARD
   // ==========================
   getDashboardSummary(): Observable<DashboardSummary> {
-    return this.http.get<ApiResponse<DashboardSummary>>(`${this.baseUrl}/Dashboard/summary`).pipe(
-      retry(1),
-      map(res => this.extractData<DashboardSummary>(res)),
-      catchError(this.handleError)
-    );
+    return this.timedGet<DashboardSummary>(`${this.baseUrl}/Dashboard/summary`, 'Dashboard API');
   }
 
   // ==========================

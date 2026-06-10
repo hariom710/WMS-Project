@@ -15,6 +15,7 @@ namespace WMS.Infrastructure.Repositories
             string? search, string? sortBy, string? sortDirection, int page, int pageSize)
         {
             var query = _context.ProjectAllocations
+                .AsNoTracking()
                 .Include(a => a.Employee)
                 .Include(a => a.Project)
                 .AsQueryable();
@@ -50,7 +51,7 @@ namespace WMS.Infrastructure.Repositories
         public async Task<PagedResult<ProjectAllocation>> GetDeletedAsync(
             string? search, string? sortBy, string? sortDirection, int page, int pageSize)
         {
-            var query = _context.ProjectAllocations.IgnoreQueryFilters()
+            var query = _context.ProjectAllocations.AsNoTracking().IgnoreQueryFilters()
                 .Include(a => a.Employee)
                 .Include(a => a.Project)
                 .Where(a => a.IsDeleted)

@@ -14,7 +14,7 @@ namespace WMS.Infrastructure.Repositories
         public async Task<PagedResult<Department>> GetAllAsync(
             string? search, string? sortBy, string? sortDirection, int page, int pageSize)
         {
-            var query = _context.Departments.AsQueryable();
+            var query = _context.Departments.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(d => d.DepartmentName.ToLower().Contains(search.ToLower()));
@@ -39,7 +39,7 @@ namespace WMS.Infrastructure.Repositories
         public async Task<PagedResult<Department>> GetDeletedAsync(
             string? search, string? sortBy, string? sortDirection, int page, int pageSize)
         {
-            var query = _context.Departments.IgnoreQueryFilters().Where(d => d.IsDeleted).AsQueryable();
+            var query = _context.Departments.AsNoTracking().IgnoreQueryFilters().Where(d => d.IsDeleted).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(d => d.DepartmentName.ToLower().Contains(search.ToLower()));

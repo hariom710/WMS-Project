@@ -8,24 +8,18 @@ namespace WMS.Infrastructure.Services
     public class ActivityLogService : IActivityLogService
     {
         private readonly WMSDbContext _context;
+        private readonly AuditLogChannel _channel;
 
-        public ActivityLogService(WMSDbContext context) => _context = context;
-
-        public async Task LogAsync(string entityName, int recordId, string action, string? description, string? username, string? userRole, string? ipAddress)
+        public ActivityLogService(WMSDbContext context, AuditLogChannel channel)
         {
-            var log = new AuditLog
-            {
-                EntityName = entityName,
-                RecordId = recordId,
-                Action = action,
-                Description = description,
-                Username = username,
-                UserRole = userRole,
-                IpAddress = ipAddress,
-                Timestamp = DateTime.UtcNow
-            };
-            _context.AuditLogs.Add(log);
-            await _context.SaveChangesAsync();
+            _context = context;
+            _channel = channel;
+        }
+
+        public Task LogAsync(string entityName, int recordId, string action, string? description, string? username, string? userRole, string? ipAddress)
+        {
+            _channel.Channel.Writer.TryWrite(new AuditLogEntry(entityName, recordId, action, description, username, userRole, ipAddress, DateTime.UtcNow));
+            return Task.CompletedTask;
         }
 
         public async Task<PagedResult<AuditLog>> GetLogsAsync(string? entityName, string? action, string? username, DateTime? from, DateTime? to, string? sortBy, string? sortDirection, int page, int pageSize)
