@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, DestroyRef, inject } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 import { ApiService } from '../services/api';
 import { AuthService } from '../auth/auth';
@@ -26,7 +26,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   today = new Date();
   summary: DashboardSummary | null = null;
 
-  constructor(private api: ApiService, private authService: AuthService) {}
+  constructor(private api: ApiService, private authService: AuthService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.username = this.authService.getUsername();
@@ -46,6 +46,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.timeEnd('[Dashboard] API Response');
         this.summary = data;
         this.loading = false;
+        this.cdr.markForCheck();
         setTimeout(() => this.buildCharts(), 0);
       },
       error: () => {

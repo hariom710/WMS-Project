@@ -12,22 +12,20 @@ namespace WMS.Infrastructure.Services
 
         public DashboardService(IServiceScopeFactory scopeFactory) => _scopeFactory = scopeFactory;
 
-        private WMSDbContext CreateContext()
-        {
-            return _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<WMSDbContext>();
-        }
-
         public async Task<DashboardSummaryDto> GetSummaryAsync()
         {
             var today = DateTime.Today;
 
-            var kpisTask = GetKpiCardsAsync(today);
-            var attendanceTask = GetAttendanceAnalyticsAsync(today);
-            var leavesTask = GetLeaveAnalyticsAsync();
-            var projectsTask = GetProjectAnalyticsAsync();
-            var departmentsTask = GetDepartmentAnalyticsAsync();
-            var clientsTask = GetClientAnalyticsAsync();
-            var activitiesTask = GetRecentActivitiesAsync();
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<WMSDbContext>();
+
+            var kpisTask = GetKpiCardsAsync(context, today);
+            var attendanceTask = GetAttendanceAnalyticsAsync(context, today);
+            var leavesTask = GetLeaveAnalyticsAsync(context);
+            var projectsTask = GetProjectAnalyticsAsync(context);
+            var departmentsTask = GetDepartmentAnalyticsAsync(context);
+            var clientsTask = GetClientAnalyticsAsync(context);
+            var activitiesTask = GetRecentActivitiesAsync(context);
 
             await Task.WhenAll(kpisTask, attendanceTask, leavesTask, projectsTask, departmentsTask, clientsTask, activitiesTask);
 
@@ -43,78 +41,79 @@ namespace WMS.Infrastructure.Services
             };
         }
 
-        private async Task<KpiCardsDto> GetKpiCardsAsync(DateTime today)
+        private async Task<KpiCardsDto> GetKpiCardsAsync(WMSDbContext context, DateTime today)
         {
-            using var context = CreateContext();
-
-            var employeesOnLeave = await context.Leaves
+            var task1 = context.Leaves
                 .CountAsync(l => l.Status == "Approved" && l.FromDate <= today && l.ToDate >= today);
 
-            var totalAllocations = await context.ProjectAllocations
+            var task2 = context.ProjectAllocations
                 .CountAsync(pa => pa.Status == true);
 
-            var announcementsPublished = await context.Announcements
+            var task3 = context.Announcements
                 .CountAsync(a => a.IsActive);
 
-            var employeeStats = await context.Employees
+            var task4 = context.Employees
                 .GroupBy(e => 1)
                 .Select(g => new
                 {
                     Total = g.Count(),
                     Active = g.Count(e => e.Status == "Active")
                 })
-                .FirstOrDefaultAsync() ?? new { Total = 0, Active = 0 };
+                .FirstOrDefaultAsync() ?? Task.FromResult(new { Total = 0, Active = 0 });
 
-            var presentToday = await context.Attendances
+            var task5 = context.Attendances
                 .CountAsync(a => a.AttendanceDate == today);
 
-            var projectStats = await context.Projects
+            var task6 = context.Projects
                 .GroupBy(p => 1)
-                .Select(g => new
-                {
-                    Active = g.Count(p => p.Status == "Active")
-                })
-                .FirstOrDefaultAsync() ?? new { Active = 0 };
+                .Select(g => new { Active = g.Count(p => p.Status == "Active") })
+                .FirstOrDefaultAsync() ?? Task.FromResult(new { Active = 0 });
 
-            var activeClients = await context.Clients.CountAsync();
+            var task7 = context.Clients.CountAsync();
+
+            await Task.WhenAll(task1, task2, task3, task4, task5, task6, task7);
 
             return new KpiCardsDto
             {
-                TotalEmployees = employeeStats.Total,
-                ActiveEmployees = employeeStats.Active,
-                PresentToday = presentToday,
-                EmployeesOnLeave = employeesOnLeave,
-                ActiveProjects = projectStats.Active,
-                ActiveClients = activeClients,
-                TotalAllocations = totalAllocations,
-                AnnouncementsPublished = announcementsPublished
+                TotalEmployees = task4.Result.Total,
+                ActiveEmployees = task4.Result.Active,
+                PresentToday = task5.Result,
+                EmployeesOnLeave = task1.Result,
+                ActiveProjects = task6.Result.Active,
+                ActiveClients = task7.Result,
+                TotalAllocations = task2.Result,
+                AnnouncementsPublished = task3.Result
             };
         }
 
-        private async Task<AttendanceAnalyticsDto> GetAttendanceAnalyticsAsync(DateTime today)
+        private async Task<AttendanceAnalyticsDto> GetAttendanceAnalyticsAsync(WMSDbContext context, DateTime today)
         {
-            using var context = CreateContext();
-
-            var stats = await context.Attendances
+            var statsTask = context.Attendances
                 .Where(a => a.AttendanceDate == today)
                 .GroupBy(a => 1)
                 .Select(g => new { Count = g.Count() })
-                .FirstOrDefaultAsync() ?? new { Count = 0 };
+                .FirstOrDefaultAsync() ?? Task.FromResult(new { Count = 0 });
 
-            var activeEmpCount = await context.Employees.CountAsync(e => e.Status == "Active");
-            var presentToday = stats.Count;
+            var activeEmpCountTask = context.Employees.CountAsync(e => e.Status == "Active");
+
+            var sixMonthsAgo = today.AddMonths(-5).AddDays(-today.Day + 1);
+            var monthlyTrendTask = context.Attendances
+                .Where(a => a.AttendanceDate >= sixMonthsAgo)
+                .GroupBy(a => new { a.AttendanceDate.Year, a.AttendanceDate.Month })
+                .Select(g => new { g.Key.Month, g.Key.Year, Count = g.Count() })
+                .OrderBy(t => t.Year).ThenBy(t => t.Month)
+                .ToListAsync();
+
+            await Task.WhenAll(statsTask, activeEmpCountTask, monthlyTrendTask);
+
+            var presentToday = statsTask.Result.Count;
+            var activeEmpCount = activeEmpCountTask.Result;
             var absentToday = Math.Max(0, activeEmpCount - presentToday);
             var attendanceRate = activeEmpCount > 0
                 ? Math.Round((double)presentToday / activeEmpCount * 100, 1)
                 : 0;
 
-            var sixMonthsAgo = today.AddMonths(-5).AddDays(-today.Day + 1);
-            var monthlyTrend = (await context.Attendances
-                .Where(a => a.AttendanceDate >= sixMonthsAgo)
-                .GroupBy(a => new { a.AttendanceDate.Year, a.AttendanceDate.Month })
-                .Select(g => new { g.Key.Month, g.Key.Year, Count = g.Count() })
-                .OrderBy(t => t.Year).ThenBy(t => t.Month)
-                .ToListAsync())
+            var monthlyTrend = monthlyTrendTask.Result
                 .Select(g => new MonthlyTrendDto
                 {
                     Month = $"{g.Month:D2}/{g.Year}",
@@ -131,22 +130,27 @@ namespace WMS.Infrastructure.Services
             };
         }
 
-        private async Task<LeaveAnalyticsDto> GetLeaveAnalyticsAsync()
+        private async Task<LeaveAnalyticsDto> GetLeaveAnalyticsAsync(WMSDbContext context)
         {
-            using var context = CreateContext();
             var sixMonthsAgo = DateTime.Today.AddMonths(-5).AddDays(-DateTime.Today.Day + 1);
 
-            var statusCounts = await context.Leaves
+            var statusCountsTask = context.Leaves
                 .GroupBy(l => l.Status)
                 .Select(g => new { Status = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.Status, g => g.Count);
 
-            var monthlyTrend = (await context.Leaves
+            var monthlyTrendTask = context.Leaves
                 .Where(l => l.CreatedDate >= sixMonthsAgo)
                 .GroupBy(l => new { l.CreatedDate.Year, l.CreatedDate.Month })
                 .Select(g => new { g.Key.Month, g.Key.Year, Count = g.Count() })
                 .OrderBy(t => t.Year).ThenBy(t => t.Month)
-                .ToListAsync())
+                .ToListAsync();
+
+            await Task.WhenAll(statusCountsTask, monthlyTrendTask);
+
+            var statusCounts = statusCountsTask.Result;
+
+            var monthlyTrend = monthlyTrendTask.Result
                 .Select(g => new MonthlyTrendDto
                 {
                     Month = $"{g.Month:D2}/{g.Year}",
@@ -163,10 +167,8 @@ namespace WMS.Infrastructure.Services
             };
         }
 
-        private async Task<ProjectAnalyticsDto> GetProjectAnalyticsAsync()
+        private async Task<ProjectAnalyticsDto> GetProjectAnalyticsAsync(WMSDbContext context)
         {
-            using var context = CreateContext();
-
             var statusCounts = await context.Projects
                 .GroupBy(p => p.Status)
                 .Select(g => new { Status = g.Key, Count = g.Count() })
@@ -185,10 +187,8 @@ namespace WMS.Infrastructure.Services
             };
         }
 
-        private async Task<DepartmentAnalyticsDto> GetDepartmentAnalyticsAsync()
+        private async Task<DepartmentAnalyticsDto> GetDepartmentAnalyticsAsync(WMSDbContext context)
         {
-            using var context = CreateContext();
-
             var employeeCounts = await context.Employees
                 .GroupBy(e => e.DepartmentId)
                 .Select(g => new { DepartmentId = g.Key, Count = g.Count() })
@@ -207,17 +207,19 @@ namespace WMS.Infrastructure.Services
             return new DepartmentAnalyticsDto { EmployeeCounts = employeeCounts };
         }
 
-        private async Task<ClientAnalyticsDto> GetClientAnalyticsAsync()
+        private async Task<ClientAnalyticsDto> GetClientAnalyticsAsync(WMSDbContext context)
         {
-            using var context = CreateContext();
-
-            var totalCount = await context.Clients.CountAsync();
-
-            var clientsWithProjects = await context.Projects
+            var totalCountTask = context.Clients.CountAsync();
+            var clientsWithProjectsTask = context.Projects
                 .Where(p => p.Status == "Active")
                 .Select(p => p.ClientId)
                 .Distinct()
                 .CountAsync();
+
+            await Task.WhenAll(totalCountTask, clientsWithProjectsTask);
+
+            var totalCount = totalCountTask.Result;
+            var clientsWithProjects = clientsWithProjectsTask.Result;
 
             return new ClientAnalyticsDto
             {
@@ -226,10 +228,8 @@ namespace WMS.Infrastructure.Services
             };
         }
 
-        private async Task<List<DashboardActivityLogDto>> GetRecentActivitiesAsync()
+        private async Task<List<DashboardActivityLogDto>> GetRecentActivitiesAsync(WMSDbContext context)
         {
-            using var context = CreateContext();
-
             return await context.AuditLogs
                 .OrderByDescending(a => a.Timestamp)
                 .Take(10)

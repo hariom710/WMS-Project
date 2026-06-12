@@ -18,11 +18,13 @@ export class ApiService {
   private baseUrl = environment.apiUrl;
   private departmentsCache$: Observable<Department[]> | null = null;
   private rolesCache$: Observable<Role[]> | null = null;
+  private dashboardCache$: Observable<DashboardSummary> | null = null;
 
   constructor(private http: HttpClient) { }
 
   invalidateDepartmentCache() { this.departmentsCache$ = null; }
   invalidateRoleCache() { this.rolesCache$ = null; }
+  invalidateDashboardCache() { this.dashboardCache$ = null; }
 
   private handleError(error: any) {
     console.error('API Error:', error);
@@ -299,7 +301,12 @@ export class ApiService {
   // DASHBOARD
   // ==========================
   getDashboardSummary(): Observable<DashboardSummary> {
-    return this.timedGet<DashboardSummary>(`${this.baseUrl}/Dashboard/summary`, 'Dashboard API');
+    if (!this.dashboardCache$) {
+      this.dashboardCache$ = this.timedGet<DashboardSummary>(`${this.baseUrl}/Dashboard/summary`, 'Dashboard API').pipe(
+        shareReplay(1)
+      );
+    }
+    return this.dashboardCache$;
   }
 
   // ==========================
