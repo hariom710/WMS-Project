@@ -52,34 +52,25 @@ namespace WMS.Infrastructure.Services
             var task3 = context.Announcements
                 .CountAsync(a => a.IsActive);
 
-            var task4 = context.Employees
-                .GroupBy(e => 1)
-                .Select(g => new
-                {
-                    Total = g.Count(),
-                    Active = g.Count(e => e.Status == "Active")
-                })
-                .FirstOrDefaultAsync() ?? Task.FromResult(new { Total = 0, Active = 0 });
+            var task4Total = context.Employees.CountAsync();
+            var task4Active = context.Employees.CountAsync(e => e.Status == "Active");
 
             var task5 = context.Attendances
                 .CountAsync(a => a.AttendanceDate == today);
 
-            var task6 = context.Projects
-                .GroupBy(p => 1)
-                .Select(g => new { Active = g.Count(p => p.Status == "Active") })
-                .FirstOrDefaultAsync() ?? Task.FromResult(new { Active = 0 });
+            var task6 = context.Projects.CountAsync(p => p.Status == "Active");
 
             var task7 = context.Clients.CountAsync();
 
-            await Task.WhenAll(task1, task2, task3, task4, task5, task6, task7);
+            await Task.WhenAll(task1, task2, task3, task4Total, task4Active, task5, task6, task7);
 
             return new KpiCardsDto
             {
-                TotalEmployees = task4.Result.Total,
-                ActiveEmployees = task4.Result.Active,
+                TotalEmployees = task4Total.Result,
+                ActiveEmployees = task4Active.Result,
                 PresentToday = task5.Result,
                 EmployeesOnLeave = task1.Result,
-                ActiveProjects = task6.Result.Active,
+                ActiveProjects = task6.Result,
                 ActiveClients = task7.Result,
                 TotalAllocations = task2.Result,
                 AnnouncementsPublished = task3.Result
@@ -89,10 +80,7 @@ namespace WMS.Infrastructure.Services
         private async Task<AttendanceAnalyticsDto> GetAttendanceAnalyticsAsync(WMSDbContext context, DateTime today)
         {
             var statsTask = context.Attendances
-                .Where(a => a.AttendanceDate == today)
-                .GroupBy(a => 1)
-                .Select(g => new { Count = g.Count() })
-                .FirstOrDefaultAsync() ?? Task.FromResult(new { Count = 0 });
+                .CountAsync(a => a.AttendanceDate == today);
 
             var activeEmpCountTask = context.Employees.CountAsync(e => e.Status == "Active");
 
@@ -106,7 +94,7 @@ namespace WMS.Infrastructure.Services
 
             await Task.WhenAll(statsTask, activeEmpCountTask, monthlyTrendTask);
 
-            var presentToday = statsTask.Result.Count;
+            var presentToday = statsTask.Result;
             var activeEmpCount = activeEmpCountTask.Result;
             var absentToday = Math.Max(0, activeEmpCount - presentToday);
             var attendanceRate = activeEmpCount > 0
